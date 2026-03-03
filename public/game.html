@@ -89,27 +89,37 @@
 
         /* Grid Setup */
         .grid { display: grid; grid-template-columns: repeat(5, 75px); gap: 12px; }
-        .cell {
-            width: 75px; height: 75px; background: var(--cell-bg); border-radius: 10px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 35px; box-shadow: 0 5px 0 #131720; transition: all 0.1s ease;
-            position: relative;
-        }
-        .cell:hover { background: var(--cell-hover); transform: translateY(2px); box-shadow: 0 3px 0 #131720; }
-        .cell:active { transform: translateY(5px); box-shadow: 0 0 0 #131720; }
-        
-        /* Cell States (Pop Animation) */
-        .cell.revealed {
-            background: rgba(0, 231, 1, 0.1); border: 2px solid var(--gem-color);
-            box-shadow: 0 0 15px rgba(0, 231, 1, 0.2); cursor: default; pointer-events: none;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .cell.mine {
-            background: rgba(255, 42, 42, 0.1); border: 2px solid var(--mine-color);
-            box-shadow: 0 0 20px rgba(255, 42, 42, 0.4); cursor: default; pointer-events: none;
-            animation: explode 0.5s ease;
-        }
-        .cell.dimmed { opacity: 0.4; pointer-events: none; } /* End game state */
+        /* Purani .cell class ko isse replace karein */
+.cell {
+    width: 60px;          /* Width fix kardi */
+    height: 60px;         /* Height bhi vahi rakhi taaki square bane */
+    aspect-ratio: 1 / 1;  /* Yeh line box ko hamesha square rakhegi */
+    background-color: #2c3e50;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Mobile ke liye special setting */
+@media (max-width: 480px) {
+    #game-board {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box; /* Padding se box bahar nahi jayega */
+    }
+
+    .cell {
+        width: 100%;       /* Grid column ke hisab se width lega */
+        height: auto;      /* Height ko auto kiya */
+        aspect-ratio: 1/1; /* Lekin aspect-ratio ise hamesha square rakhega */
+    }
+}
 
         @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes explode { 
@@ -267,43 +277,29 @@ fetchBalance(); // Page khulte hi balance dikhayega
     createBoard();
 }
 
-       function revealCell(cell, index) {
-    if (!isPlaying || cell.classList.contains('revealed')) return;
+      // --- SMART DYNAMIC MULTIPLIER ---
+const totalCells = 25;
+const mineCount = mines.size; // User ne kitni mines select ki hain
+const revealed = document.querySelectorAll('.cell.revealed').length;
 
-    if (mines.has(index)) {
-        // Hit a Mine
-        cell.classList.add('mine');
-        cell.innerHTML = '💣';
-        endGame(false);
-    } else {
-        // Hit a Gem
-        cell.classList.add('revealed');
-        cell.innerHTML = '💎';
-        
-        // --- NAYA MULTIPLIER LOGIC (1.015x Start) ---
-        const totalCells = 25;
-        const mineCount = mines.size;
-        const revealed = document.querySelectorAll('.cell.revealed').length;
+// 1. Base Multiplier Formula (Standard Probability)
+let rawMultiplier = (totalCells - (revealed - 1)) / (totalCells - mineCount - (revealed - 1));
 
-        // Standard probability formula
-        let rawMultiplier = (totalCells - mineCount) / (totalCells - mineCount - (revealed - 1));
-        
-        // House Edge (Aapka Commission): 1.015x set karne ke liye 0.975 use kar rahe hain
-        let houseEdge = 0.975;
-        currentMultiplier = rawMultiplier * houseEdge;
+// 2. House Edge (Aapka Commission): 0.97 matlab 3% aapka profit
+let houseEdge = 0.97; 
 
-        // Force 1.015x on first click for 1 Mine
-        if (revealed === 1 && mineCount === 1) {
-            currentMultiplier = 1.015;
-        } 
-        // Force minimum 1.01x on any first click
-        else if (revealed === 1 && currentMultiplier < 1.01) {
-            currentMultiplier = 1.015;
-        }
+// 3. Calculation with Admin Safety
+currentMultiplier = rawMultiplier * houseEdge;
 
-        updateStatusText();
-    }
+// 4. Special 'First Click' Settings (Aapke hisab se)
+if (revealed === 1) {
+    if (mineCount === 1) currentMultiplier = 1.015; // ₹10 -> ₹10.15
+    else if (mineCount === 3) currentMultiplier = 1.10; // ₹10 -> ₹11.00
+    else if (mineCount === 5) currentMultiplier = 1.25; // ₹10 -> ₹12.50
+    else if (mineCount >= 10) currentMultiplier = 1.80; // ₹10 -> ₹18.00 (High Risk)
 }
+
+updateStatusText();
 
         async function cashOut() {
     if (!isPlaying) return;
