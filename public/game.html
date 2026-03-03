@@ -192,200 +192,172 @@
 
     <script>
 
-        const currentUser = localStorage.getItem('currentUser');
+       const currentUser = localStorage.getItem('currentUser');
 if (!currentUser) {
     alert("Pehle Login karein!");
     window.location.href = '/index.html';
 }
 
-        const board = document.getElementById('game-board');
-        let betAmount = 0;
-        let mines = new Set();
-        let isPlaying = false;
-        let currentMultiplier = 1.00;
+const board = document.getElementById('game-board');
+let betAmount = 0;
+let mines = new Set();
+let isPlaying = false;
+let currentMultiplier = 1.00;
 
-        // Fetch User Balance on Load
-        async function fetchBalance() {
-    const res = await fetch('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser }) 
-    });
-    const data = await res.json();
-    if(data.success) {
-        document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
+// Fetch User Balance on Load
+async function fetchBalance() {
+    try {
+        const res = await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser }) 
+        });
+        const data = await res.json();
+        if(data.success) {
+            document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
+        }
+    } catch(e) { console.log("Balance fetch error"); }
+}
+
+fetchBalance();
+createBoard();
+
+function createBoard() {
+    board.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        // Mobile touch fix: onclick works best
+        cell.onclick = () => revealCell(cell, i);
+        board.appendChild(cell);
     }
 }
-fetchBalance(); // Page khulte hi balance dikhayega
-        createBoard();
 
-        // Build 5x5 Grid
-        function createBoard() {
-            board.innerHTML = '';
-            for (let i = 0; i < 25; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('cell');
-                cell.dataset.index = i;
-                cell.onclick = () => revealCell(cell, i);
-                board.appendChild(cell);
-            }
-        }
-
-        async function startGame() {
-    // 1. Pehle values read karein
+async function startGame() {
     betAmount = parseFloat(document.getElementById('bet').value);
     const mineCount = parseInt(document.getElementById('mine-count').value);
     
-    // 2. User ID nikaalein jo login ke waqt save hui thi
-    const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) return alert("Pehle Login karein!");
-
     if (betAmount < 10) return alert("Minimum bet is ₹10");
 
-    // 3. SERVER SE BALANCE KAATNA (Fix kiya hua hissa)
     try {
         const res = await fetch('/api/bet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // Yahan humne userId ko jodd diya hai 👇
-            body: JSON.stringify({ 
-                betAmount: betAmount, 
-                userId: currentUser 
-            })
+            body: JSON.stringify({ betAmount: betAmount, userId: currentUser })
         });
         
         const data = await res.json();
-        
-        // Agar balance nahi hai toh yahin ruk jao
         if (!data.success) return alert(data.message);
         
-        // Naya balance screen par dikhao
         document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+        
+        // --- GAME START LOGIC ---
+        isPlaying = true; // Isse boxes khulna shuru honge
+        currentMultiplier = 1.00;
+        
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('cashout-btn').style.display = 'block';
+        
+        mines.clear();
+        while(mines.size < mineCount) {
+            mines.add(Math.floor(Math.random() * 25));
+        }
+        createBoard(); // Board refresh for new game
+        updateStatusText();
+
     } catch(e) { 
-        console.log("Server error: " + e);
-        return alert("Server se connect nahi ho paa rahe!"); 
+        alert("Server error! Game start nahi ho paya."); 
     }
-
-    // --- AB AAPKA BAKI KA PURANA CODE (BOARD WALA) ---
-    // Isse aapka table aur logic bilkul nahi hilega
-    isPlaying = true;
-    currentMultiplier = 1.00;
-    updateStatusText();
-    
-    document.getElementById('start-btn').style.display = 'none';
-    document.getElementById('cashout-btn').style.display = 'block';
-    document.getElementById('cashout-btn').innerText = `Cash Out (₹${betAmount.toFixed(2)})`;
-
-    // Plant Mines
-    mines.clear();
-    while(mines.size < mineCount) {
-        mines.add(Math.floor(Math.random() * 25));
-    }
-    createBoard();
 }
 
-      // --- SMART DYNAMIC MULTIPLIER ---
-const totalCells = 25;
-const mineCount = mines.size; // User ne kitni mines select ki hain
-const revealed = document.querySelectorAll('.cell.revealed').length;
+function revealCell(cell, index) {
+    // Agar game start nahi hua ya box pehle se khula hai toh kuch mat karo
+    if (!isPlaying || cell.classList.contains('revealed') || cell.classList.contains('mine')) return;
 
-// 1. Base Multiplier Formula (Standard Probability)
-let rawMultiplier = (totalCells - (revealed - 1)) / (totalCells - mineCount - (revealed - 1));
+    if (mines.has(index)) {
+        cell.classList.add('mine');
+        cell.innerHTML = '💣';
+        endGame(false);
+    } else {
+        cell.classList.add('revealed');
+        cell.innerHTML = '💎';
+        
+        // --- DYNAMIC MULTIPLIER LOGIC ---
+        const totalCells = 25;
+        const mCount = mines.size;
+        const revealedCount = document.querySelectorAll('.cell.revealed').length;
 
-// 2. House Edge (Aapka Commission): 0.97 matlab 3% aapka profit
-let houseEdge = 0.97; 
+        // Formula: Jitni zyada mines aur jitne zyada diamonds, utna bada multiplier
+        let rawMultiplier = (totalCells - (revealedCount - 1)) / (totalCells - mCount - (revealedCount - 1));
+        let houseEdge = 0.97; // Admin profit
+        currentMultiplier = rawMultiplier * houseEdge;
 
-// 3. Calculation with Admin Safety
-currentMultiplier = rawMultiplier * houseEdge;
-
-// 4. Special 'First Click' Settings (Aapke hisab se)
-if (revealed === 1) {
-    if (mineCount === 1) currentMultiplier = 1.015; // ₹10 -> ₹10.15
-    else if (mineCount === 3) currentMultiplier = 1.10; // ₹10 -> ₹11.00
-    else if (mineCount === 5) currentMultiplier = 1.25; // ₹10 -> ₹12.50
-    else if (mineCount >= 10) currentMultiplier = 1.80; // ₹10 -> ₹18.00 (High Risk)
+        // Custom start points for better feel
+        if (revealedCount === 1) {
+            if (mCount === 1) currentMultiplier = 1.015;
+            else if (mCount === 3) currentMultiplier = 1.12;
+            else if (mCount === 5) currentMultiplier = 1.25;
+            else if (mCount >= 10) currentMultiplier = 2.00;
+        }
+        
+        updateStatusText();
+    }
 }
 
-updateStatusText();
-
-        async function cashOut() {
+async function cashOut() {
     if (!isPlaying) return;
-    
-    // 1. Dekho kitna total paisa (winnings) bana hai
     const winnings = betAmount * currentMultiplier;
-    
-    // 2. Login user ki ID (Phone Number) uthao jo localStorage mein save hai
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) return alert("Session expired! Please login again.");
 
-    // 3. SERVER KO BATAO: "Is user ne itna jeeta hai, balance mein jodd do"
     try {
         const res = await fetch('/api/cashout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // Yahan humne userId ko jodd diya hai 👇
-            body: JSON.stringify({ 
-                winnings: winnings, 
-                userId: currentUser 
-            })
+            body: JSON.stringify({ winnings: winnings, userId: currentUser })
         });
 
         const data = await res.json();
-
         if (data.success) {
-            // Screen par naya balance update karo
             document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-            
-            // Aapka purana alert aur game end logic
-            alert(`🎉 Cashout Successful! You won ₹${winnings.toFixed(2)}`);
+            alert(`🎉 Jeet gaye! ₹${winnings.toFixed(2)}`);
             endGame(true);
-        } else {
-            alert("Error saving winnings. Server check karein.");
         }
-    } catch(e) {
-        console.error("Cashout Error:", e);
-        alert("Server se connect nahi ho paa rahe! Profit save nahi hua.");
+    } catch(e) { alert("Cashout error!"); }
+}
+
+function endGame(won) {
+    isPlaying = false;
+    document.getElementById('start-btn').style.display = 'block';
+    document.getElementById('cashout-btn').style.display = 'none';
+    
+    document.querySelectorAll('.cell').forEach(cell => {
+        let idx = parseInt(cell.dataset.index);
+        if (mines.has(idx)) {
+            cell.innerHTML = '💣';
+            if(!cell.classList.contains('mine')) cell.classList.add('dimmed');
+        } else if(!cell.classList.contains('revealed')) {
+            cell.classList.add('dimmed');
+        }
+    });
+
+    if(!won) {
+        document.getElementById('profit').innerText = `-₹${betAmount.toFixed(2)}`;
+        document.getElementById('profit').style.color = 'red';
     }
 }
 
-        function endGame(won) {
-            isPlaying = false;
-            document.getElementById('start-btn').style.display = 'block';
-            document.getElementById('cashout-btn').style.display = 'none';
-            
-            // Reveal all logic
-            document.querySelectorAll('.cell').forEach(cell => {
-                let idx = parseInt(cell.dataset.index);
-                
-                if (mines.has(idx)) {
-                    // Show hidden mines dimly
-                    if(!cell.classList.contains('mine')) {
-                        cell.innerHTML = '💣';
-                        cell.classList.add('dimmed');
-                    }
-                } else if(!cell.classList.contains('revealed')) {
-                    // Dim unclicked safe gems
-                    cell.classList.add('dimmed');
-                }
-            });
-
-            if(!won) {
-                document.getElementById('profit').innerText = `-₹${betAmount.toFixed(2)}`;
-                document.getElementById('profit').style.color = 'var(--mine-color)';
-            }
-        }
-
-        function updateStatusText() {
-            document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
-            let currentWin = betAmount * currentMultiplier;
-            let profit = currentWin - betAmount;
-            
-            let profitElem = document.getElementById('profit');
-            profitElem.innerText = `+₹${profit.toFixed(2)}`;
-            profitElem.style.color = 'var(--gem-color)';
-            
-            document.getElementById('cashout-btn').innerText = `Cash Out (₹${currentWin.toFixed(2)})`;
-        }
+function updateStatusText() {
+    document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
+    let currentWin = betAmount * currentMultiplier;
+    let profit = currentWin - betAmount;
+    
+    let profitElem = document.getElementById('profit');
+    profitElem.innerText = `+₹${profit.toFixed(2)}`;
+    profitElem.style.color = '#00ff00';
+    
+    document.getElementById('cashout-btn').innerText = `Cash Out (₹${currentWin.toFixed(2)})`;
+}
     </script>
 </body>
 </html>
