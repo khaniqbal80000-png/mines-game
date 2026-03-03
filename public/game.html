@@ -266,26 +266,43 @@ fetchBalance(); // Page khulte hi balance dikhayega
     createBoard();
 }
 
-        function revealCell(cell, index) {
-            if (!isPlaying || cell.classList.contains('revealed')) return;
+       function revealCell(cell, index) {
+    if (!isPlaying || cell.classList.contains('revealed')) return;
 
-            if (mines.has(index)) {
-                // Hit a Mine
-                cell.classList.add('mine');
-                cell.innerHTML = '💣';
-                endGame(false);
-            } else {
-                // Hit a Gem
-                cell.classList.add('revealed');
-                cell.innerHTML = '💎';
-                
-                // Increase Multiplier (Dynamic Logic based on Mines)
-                const mineCount = mines.size;
-                currentMultiplier += (mineCount * 0.05) + 0.10; 
-                
-                updateStatusText();
-            }
+    if (mines.has(index)) {
+        // Hit a Mine
+        cell.classList.add('mine');
+        cell.innerHTML = '💣';
+        endGame(false);
+    } else {
+        // Hit a Gem
+        cell.classList.add('revealed');
+        cell.innerHTML = '💎';
+        
+        // --- NAYA MULTIPLIER LOGIC (1.015x Start) ---
+        const totalCells = 25;
+        const mineCount = mines.size;
+        const revealed = document.querySelectorAll('.cell.revealed').length;
+
+        // Standard probability formula
+        let rawMultiplier = (totalCells - mineCount) / (totalCells - mineCount - (revealed - 1));
+        
+        // House Edge (Aapka Commission): 1.015x set karne ke liye 0.975 use kar rahe hain
+        let houseEdge = 0.975;
+        currentMultiplier = rawMultiplier * houseEdge;
+
+        // Force 1.015x on first click for 1 Mine
+        if (revealed === 1 && mineCount === 1) {
+            currentMultiplier = 1.015;
+        } 
+        // Force minimum 1.01x on any first click
+        else if (revealed === 1 && currentMultiplier < 1.01) {
+            currentMultiplier = 1.015;
         }
+
+        updateStatusText();
+    }
+}
 
         async function cashOut() {
     if (!isPlaying) return;

@@ -51,7 +51,13 @@
     </style>
 </head>
 <body>
-
+    <div id="admin-login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; justify-content:center; align-items:center;">
+    <div style="background:#222; padding:30px; border-radius:10px; text-align:center; border:1px solid #ff0055;">
+        <h2 style="color:#fff; margin-bottom:20px;">Admin Access Only</h2>
+        <input type="password" id="admin-pass" placeholder="Enter Admin Password" style="padding:10px; width:200px; border-radius:5px; border:none; margin-bottom:15px;"><br>
+        <button onclick="checkAdminPass()" style="padding:10px 30px; background:#ff0055; color:#fff; border:none; border-radius:5px; cursor:pointer;">Login</button>
+    </div>
+</div>
     <div class="container">
         <h1>👑 Admin Control Room</h1>
         
@@ -70,6 +76,28 @@
     </div>
 
     <script>
+        // Aapka Secret Password yahan set karein
+const SECRET_ADMIN_PASS = "s1o2h3e4l5"; // Isse apni marzi se badal lein
+
+function checkAdminPass() {
+    const enteredPass = document.getElementById('admin-pass').value;
+    
+    if (enteredPass === SECRET_ADMIN_PASS) {
+        // Sahi password par overlay hata do
+        document.getElementById('admin-login-overlay').style.display = 'none';
+        sessionStorage.setItem('adminAuthenticated', 'true');
+    } else {
+        alert("Galat Password! Access Denied.");
+        window.location.href = "/index.html"; // Galat hone par home page bhej do
+    }
+}
+
+// Page load par check karein ki kya pehle login kiya tha
+window.onload = function() {
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+        document.getElementById('admin-login-overlay').style.display = 'none';
+    }
+};
         // 1. Database se Pending Requests lana
         async function loadPendingTxns() {
             const listContainer = document.getElementById('txn-list');
