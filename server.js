@@ -2,7 +2,14 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const app = express();
-const PORT = 3000;
+// Yeh line aapke public folder (jisme HTML/CSS hain) ko server se connect karegi
+app.use(express.static('public'));
+
+// Yeh line website khulte hi index.html (Login page) dikhayegi
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.static(path.join(__dirname, 'public')));
