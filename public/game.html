@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build x Mines</title>
+    <link rel="icon" type="image/png" href="https://th.bing.com/th/id/OIG4.ik49zs_d.8zxz4I9PTxc?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #e6c27a;
+            --gold-glow: rgba(230, 194, 122, 0.4);
+            --bg-main: #0b0e14;
+            --panel-bg: #151924;
+            --cell-bg: #212736;
+            --cell-hover: #2c3445;
+            --gem-color: #00e701;
+            --mine-color: #ff2a2a;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Poppins', sans-serif; background: var(--bg-main); color: white;
+            margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Navigation */
+        nav { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 30px; background: rgba(21, 25, 36, 0.8); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #2a2e38;
+        }
+        .logo { font-size: 24px; font-weight: 800; color: var(--gold); letter-spacing: 1px; }
+        .nav-links a { 
+            color: #8c96a5; text-decoration: none; margin-left: 20px; font-weight: 600; transition: 0.3s; 
+        }
+        .nav-links a:hover { color: var(--gold); }
+        .balance-badge {
+            background: rgba(230, 194, 122, 0.1); border: 1px solid var(--gold);
+            padding: 8px 20px; border-radius: 20px; color: var(--gold); font-weight: bold;
+        }
+
+        /* Main Game Layout */
+        .main-container {
+            display: flex; flex: 1; max-width: 1200px; margin: 40px auto; width: 100%; gap: 30px; padding: 0 20px;
+        }
+
+        /* Left Side: Controls */
+        .controls {
+            width: 320px; background: var(--panel-bg); padding: 25px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 20px;
+        }
+        .input-group label { display: block; color: #8c96a5; font-size: 13px; margin-bottom: 8px; font-weight: 600; }
+        .input-group input {
+            width: 100%; padding: 15px; background: #0b0e14; border: 1px solid #2a2e38;
+            color: white; border-radius: 8px; font-size: 16px; font-weight: 600; transition: 0.3s;
+        }
+        .input-group input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
+
+        .btn {
+            width: 100%; padding: 18px; font-size: 18px; font-weight: 800; border: none; border-radius: 8px;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+        }
+        .btn-bet { background: var(--gold); color: #000; }
+        .btn-bet:hover { background: #f5d693; box-shadow: 0 0 20px var(--gold-glow); transform: translateY(-2px); }
+        .btn-bet:disabled { background: #2a2e38; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .btn-cashout { background: var(--gem-color); color: #000; display: none; }
+        .btn-cashout:hover { box-shadow: 0 0 20px rgba(0, 231, 1, 0.4); transform: translateY(-2px); }
+
+        /* Right Side: Game Area */
+        .game-area {
+            flex: 1; background: var(--panel-bg); border-radius: 15px; padding: 40px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;
+        }
+
+        /* Live Profit Tracker */
+        .status-bar {
+            width: 100%; display: flex; justify-content: space-between; margin-bottom: 30px;
+            background: #0b0e14; padding: 15px 25px; border-radius: 10px; border: 1px solid #2a2e38;
+        }
+        .status-box { text-align: center; }
+        .status-title { font-size: 12px; color: #8c96a5; text-transform: uppercase; letter-spacing: 1px; }
+        .status-value { font-size: 24px; font-weight: 800; color: white; }
+        .text-green { color: var(--gem-color) !important; text-shadow: 0 0 10px rgba(0,231,1,0.3); }
+
+        /* Grid Setup */
+        .grid { display: grid; grid-template-columns: repeat(5, 75px); gap: 12px; }
+        .cell {
+            width: 75px; height: 75px; background: var(--cell-bg); border-radius: 10px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 35px; box-shadow: 0 5px 0 #131720; transition: all 0.1s ease;
+            position: relative;
+        }
+        .cell:hover { background: var(--cell-hover); transform: translateY(2px); box-shadow: 0 3px 0 #131720; }
+        .cell:active { transform: translateY(5px); box-shadow: 0 0 0 #131720; }
+        
+        /* Cell States (Pop Animation) */
+        .cell.revealed {
+            background: rgba(0, 231, 1, 0.1); border: 2px solid var(--gem-color);
+            box-shadow: 0 0 15px rgba(0, 231, 1, 0.2); cursor: default; pointer-events: none;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .cell.mine {
+            background: rgba(255, 42, 42, 0.1); border: 2px solid var(--mine-color);
+            box-shadow: 0 0 20px rgba(255, 42, 42, 0.4); cursor: default; pointer-events: none;
+            animation: explode 0.5s ease;
+        }
+        .cell.dimmed { opacity: 0.4; pointer-events: none; } /* End game state */
+
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes explode { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.2); background: var(--mine-color); } 
+            100% { transform: scale(1); } 
+        }
+
+        /* Mobile View */
+        @media (max-width: 800px) {
+            .main-container { flex-direction: column-reverse; align-items: center; }
+            .controls, .game-area { width: 100%; max-width: 400px; }
+            .grid { grid-template-columns: repeat(5, 1fr); width: 100%; }
+            .cell { width: 100%; height: 60px; font-size: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">💣 Build x Mines</div>
+        <div class="balance-badge" id="top-balance">₹0.00</div>
+        <div class="nav-links">
+            <a href="/wallet.html">Wallet</a>
+            <a href="/history.html">History</a>
+            <a href="/index.html">Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        
+        <div class="controls">
+            <div class="input-group">
+                <label>Bet Amount (₹)</label>
+                <input type="number" id="bet" value="10" min="10">
+            </div>
+            <div class="input-group">
+                <label>Number of Mines (1-24)</label>
+                <input type="number" id="mine-count" value="3" min="1" max="24">
+            </div>
+            
+            <button id="start-btn" class="btn btn-bet" onclick="startGame()">Bet</button>
+            <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()">Cash Out</button>
+        </div>
+
+        <div class="game-area" id="game-bg">
+            
+            <div class="status-bar">
+                <div class="status-box">
+                    <div class="status-title">Multiplier</div>
+                    <div class="status-value" id="multiplier">1.00x</div>
+                </div>
+                <div class="status-box">
+                    <div class="status-title">Live Profit</div>
+                    <div class="status-value text-green" id="profit">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="grid" id="game-board"></div>
+            
+        </div>
+    </div>
+
+    <script>
+
+        const currentUser = localStorage.getItem('currentUser');
+if (!currentUser) {
+    alert("Pehle Login karein!");
+    window.location.href = '/index.html';
+}
+
+        const board = document.getElementById('game-board');
+        let betAmount = 0;
+        let mines = new Set();
+        let isPlaying = false;
+        let currentMultiplier = 1.00;
+
+        // Fetch User Balance on Load
+        async function fetchBalance() {
+    const res = await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser }) 
+    });
+    const data = await res.json();
+    if(data.success) {
+        document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
+    }
+}
+fetchBalance(); // Page khulte hi balance dikhayega
+        createBoard();
+
+        // Build 5x5 Grid
+        function createBoard() {
+            board.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.onclick = () => revealCell(cell, i);
+                board.appendChild(cell);
+            }
+        }
+
+        async function startGame() {
+    // 1. Pehle values read karein
+    betAmount = parseFloat(document.getElementById('bet').value);
+    const mineCount = parseInt(document.getElementById('mine-count').value);
+    
+    // 2. User ID nikaalein jo login ke waqt save hui thi
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) return alert("Pehle Login karein!");
+
+    if (betAmount < 10) return alert("Minimum bet is ₹10");
+
+    // 3. SERVER SE BALANCE KAATNA (Fix kiya hua hissa)
+    try {
+        const res = await fetch('/api/bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Yahan humne userId ko jodd diya hai 👇
+            body: JSON.stringify({ 
+                betAmount: betAmount, 
+                userId: currentUser 
+            })
+        });
+        
+        const data = await res.json();
+        
+        // Agar balance nahi hai toh yahin ruk jao
+        if (!data.success) return alert(data.message);
+        
+        // Naya balance screen par dikhao
+        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+    } catch(e) { 
+        console.log("Server error: " + e);
+        return alert("Server se connect nahi ho paa rahe!"); 
+    }
+
+    // --- AB AAPKA BAKI KA PURANA CODE (BOARD WALA) ---
+    // Isse aapka table aur logic bilkul nahi hilega
+    isPlaying = true;
+    currentMultiplier = 1.00;
+    updateStatusText();
+    
+    document.getElementById('start-btn').style.display = 'none';
+    document.getElementById('cashout-btn').style.display = 'block';
+    document.getElementById('cashout-btn').innerText = `Cash Out (₹${betAmount.toFixed(2)})`;
+
+    // Plant Mines
+    mines.clear();
+    while(mines.size < mineCount) {
+        mines.add(Math.floor(Math.random() * 25));
+    }
+    createBoard();
+}
+
+       function revealCell(cell, index) {
+    if (!isPlaying || cell.classList.contains('revealed')) return;
+
+    if (mines.has(index)) {
+        // Hit a Mine
+        cell.classList.add('mine');
+        cell.innerHTML = '💣';
+        endGame(false);
+    } else {
+        // Hit a Gem
+        cell.classList.add('revealed');
+        cell.innerHTML = '💎';
+        
+        // --- NAYA MULTIPLIER LOGIC (1.015x Start) ---
+        const totalCells = 25;
+        const mineCount = mines.size;
+        const revealed = document.querySelectorAll('.cell.revealed').length;
+
+        // Standard probability formula
+        let rawMultiplier = (totalCells - mineCount) / (totalCells - mineCount - (revealed - 1));
+        
+        // House Edge (Aapka Commission): 1.015x set karne ke liye 0.975 use kar rahe hain
+        let houseEdge = 0.975;
+        currentMultiplier = rawMultiplier * houseEdge;
+
+        // Force 1.015x on first click for 1 Mine
+        if (revealed === 1 && mineCount === 1) {
+            currentMultiplier = 1.015;
+        } 
+        // Force minimum 1.01x on any first click
+        else if (revealed === 1 && currentMultiplier < 1.01) {
+            currentMultiplier = 1.015;
+        }
+
+        updateStatusText();
+    }
+}
+
+        async function cashOut() {
+    if (!isPlaying) return;
+    
+    // 1. Dekho kitna total paisa (winnings) bana hai
+    const winnings = betAmount * currentMultiplier;
+    
+    // 2. Login user ki ID (Phone Number) uthao jo localStorage mein save hai
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) return alert("Session expired! Please login again.");
+
+    // 3. SERVER KO BATAO: "Is user ne itna jeeta hai, balance mein jodd do"
+    try {
+        const res = await fetch('/api/cashout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Yahan humne userId ko jodd diya hai 👇
+            body: JSON.stringify({ 
+                winnings: winnings, 
+                userId: currentUser 
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            // Screen par naya balance update karo
+            document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+            
+            // Aapka purana alert aur game end logic
+            alert(`🎉 Cashout Successful! You won ₹${winnings.toFixed(2)}`);
+            endGame(true);
+        } else {
+            alert("Error saving winnings. Server check karein.");
+        }
+    } catch(e) {
+        console.error("Cashout Error:", e);
+        alert("Server se connect nahi ho paa rahe! Profit save nahi hua.");
+    }
+}
+
+        function endGame(won) {
+            isPlaying = false;
+            document.getElementById('start-btn').style.display = 'block';
+            document.getElementById('cashout-btn').style.display = 'none';
+            
+            // Reveal all logic
+            document.querySelectorAll('.cell').forEach(cell => {
+                let idx = parseInt(cell.dataset.index);
+                
+                if (mines.has(idx)) {
+                    // Show hidden mines dimly
+                    if(!cell.classList.contains('mine')) {
+                        cell.innerHTML = '💣';
+                        cell.classList.add('dimmed');
+                    }
+                } else if(!cell.classList.contains('revealed')) {
+                    // Dim unclicked safe gems
+                    cell.classList.add('dimmed');
+                }
+            });
+
+            if(!won) {
+                document.getElementById('profit').innerText = `-₹${betAmount.toFixed(2)}`;
+                document.getElementById('profit').style.color = 'var(--mine-color)';
+            }
+        }
+
+        function updateStatusText() {
+            document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
+            let currentWin = betAmount * currentMultiplier;
+            let profit = currentWin - betAmount;
+            
+            let profitElem = document.getElementById('profit');
+            profitElem.innerText = `+₹${profit.toFixed(2)}`;
+            profitElem.style.color = 'var(--gem-color)';
+            
+            document.getElementById('cashout-btn').innerText = `Cash Out (₹${currentWin.toFixed(2)})`;
+        }
+    </script>
+</body>
+</html>
