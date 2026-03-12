@@ -163,7 +163,7 @@
         <div style="background:#1a1a1a; margin:15% auto; padding:20px; border:2px solid gold; width:80%; max-width:400px; text-align:center; border-radius:15px;">
             <h2 style="color:gold;">🏆 MINES TOURNAMENT</h2>
             <p style="color:white;" id="event-text">Join now!</p>
-            <button onclick="closeEvent()" style="background:gold; padding:10px 20px; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">KHELNA SHURU KAREIN</button>
+            <button onclick="closeEvent()" style="background:gold; padding:10px 20px; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">Play Now</button>
         </div>
     </div>
 
@@ -178,12 +178,6 @@
     <nav>
         <div class="logo">💣 Build x Mines</div>
         <div class="balance-badge" id="top-balance">₹0.00</div>
-        <div class="gift-section" style="margin-top:20px; background:#1a1a1a; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
-    <h4 style="color:var(--gold); margin:0 0 10px 0;">🎁 Have a Gift Code?</h4>
-    <input type="text" id="gift-input" placeholder="Enter Code (e.g. FREE50)" style="width:70%; padding:10px; border-radius:5px; border:none;">
-    <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Claim</button>
-</div>
-
 <script>
 async function redeemGift() {
     const code = document.getElementById('gift-input').value;
@@ -213,33 +207,21 @@ async function redeemGift() {
             <a href="/index.html">Logout</a>
         </div>
     </nav>
-
+                
     <div class="main-container">
         <div class="controls">
             <div class="input-group"><label>Bet Amount (₹)</label><input type="number" id="bet" value="10"></div>
             <div class="input-group"><label>Number of Mines</label><input type="number" id="mine-count" value="3"></div>
             <button id="start-btn" class="btn btn-bet" onclick="startGame()">Bet</button>
-            <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()">Cash Out</button>
-        </div>
-
-        <div class="game-area">
-            <div class="status-bar">
-                <div class="status-box"><div>Multiplier</div><div class="status-value" id="multiplier">1.00x</div></div>
-                <div class="status-box"><div>Live Profit</div><div class="status-value" style="color:#00ff00;" id="profit">₹0.00</div></div>
-            </div>
-            <div class="grid" id="game-board"></div>
-            
-            <div class="leaderboard-container" style="margin-top:30px; background:#1a1a1a; padding:15px; border-radius:12px; width:100%;">
-                <h3 style="color:gold; text-align:center;">🏆 Today's Top Winners</h3>
-                <table style="width:100%; color:white; border-collapse:collapse;"><tbody id="leaderboard-body"></tbody></table>
-            </div>
-
-            <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
-        </div>
-    </div>
-        <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
-    <h3 style="color: #e6c27a; margin-top: 0;">🔗 Refer & Earn ₹20</h3>
-    <p style="font-size: 12px; color: #8c96a5;">Apne doston ko invite karein. Jab wo pehla deposit karenge, aapko ₹20 milenge!</p>
+            <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()">Cash Out</button> 
+             <div class="gift-section" style="margin-top:20px; background:#1a1a1a; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
+    <h4 style="color:var(--gold); margin:0 0 10px 0;">🎁 Have a Gift Code?</h4>
+    <input type="text" id="gift-input" placeholder="Enter Code (e.g. FREE50)" style="width:70%; padding:10px; border-radius:5px; border:none;">
+    <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Claim</button>
+</div> 
+            <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
+    <h3 style="color: #e6c27a; margin-top: 0;">🔗 Refer & Earn</h3>
+    <p style="font-size: 12px; color: #8c96a5;">Refer a friend and earn ₹20 when they make their first deposit!</p>
     
     <div style="background: #0b0e14; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; margin: 15px 0;">
         <span id="my-ref-link" style="color: #00e701; font-weight: bold; font-size: 13px;">Loading Link...</span>
@@ -249,6 +231,23 @@ async function redeemGift() {
         COPY & SHARE
     </button>
 </div>
+
+        </div>
+        <div class="game-area">
+            <div class="status-bar">
+                <div class="status-box"><div>Multiplier</div><div class="status-value" id="multiplier">1.00x</div></div>
+                <div class="status-box"><div>Live Profit</div><div class="status-value" style="color:#00ff00;" id="profit">₹0.00</div></div>
+            </div>
+            <div class="grid" id="game-board"></div>
+            
+        </div>
+    </div>
+     <div class="leaderboard-container" style="margin-top:30px; background:#1a1a1a; padding:15px; border-radius:12px; width:100%;">
+                <h3 style="color:gold; text-align:center;">🏆 Today's Top Winners</h3>
+                <table style="width:100%; color:white; border-collapse:collapse;"><tbody id="leaderboard-body"></tbody></table>
+            </div>
+
+            <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
 
 <script>
     // User ka phone number hi unka referral code hai
