@@ -2,187 +2,289 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Boss Admin Panel - Mines Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; background: #0b0e14; color: white; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        h1 { color: #00e701; text-align: center; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(0,231,1,0.3); }
-        
-        .stats-bar { display: flex; justify-content: space-around; background: #1a1f2c; padding: 15px; border-radius: 10px; margin-bottom: 30px; border: 1px solid #2a2e38; }
-        .stat-item { text-align: center; }
-        .stat-item h2 { margin: 0; color: #00e701; }
-        .stat-item p { margin: 0; font-size: 12px; color: #8c96a5; }
+        @media (max-width: 768px) {
+    .container {
+        padding: 0 10px;
+        margin-top: 20px;
+    }
 
-        .card { 
-            background: #151924; 
-            border: 1px solid #2a2e38; 
-            border-radius: 12px; 
-            padding: 20px; 
-            margin-bottom: 15px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            transition: 0.3s;
+    .stats-bar {
+        flex-direction: column; /* Stat items ek ke niche ek */
+        gap: 15px;
+        text-align: center;
+    }
+
+    /* Table ko scrollable banana */
+    .card {
+        padding: 15px;
+        overflow-x: auto; /* Agar table badi ho toh scroll ho jaye */
+    }
+
+    table {
+        min-width: 450px; /* Mobile par table ko pichakne se rokega */
+    }
+
+    /* Master Gift Generator ka grid mobile par 1 column */
+    .card div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    .txn-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .amount-section {
+        text-align: center;
+    }
+
+    .btn {
+        width: 100%; /* Mobile par buttons bade aur clickable */
+        margin: 5px 0;
+    }
+}
+        :root {
+            --gold: #e6c27a;
+            --gold-glow: rgba(230, 194, 122, 0.4);
+            --bg-main: #0b0e14;
+            --panel-bg: #151924;
+            --cell-bg: #212736;
+            --gem-color: #00e701;
+            --mine-color: #ff2a2a;
         }
-        .card:hover { border-color: #00e701; transform: translateY(-2px); }
-        
-        .details h3 { margin: 0 0 5px; color: #e6c27a; font-size: 18px; }
-        .details p { margin: 2px 0; color: #8c96a5; font-size: 13px; }
-        .user-tag { background: #2a2e38; padding: 2px 8px; border-radius: 4px; color: #00e701; font-weight: bold; }
-        
-        .amount-section { text-align: right; margin-right: 20px; min-width: 100px; }
-        .amount { font-size: 22px; font-weight: 800; }
-        .dep-color { color: #00e701; }
-        .wth-color { color: #ff2a2a; }
 
-        .actions { display: flex; gap: 10px; }
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; }
-        .btn-approve { background: #00e701; color: black; }
-        .btn-reject { background: #ff2a2a; color: white; }
-        .btn:active { transform: scale(0.95); }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: white; margin: 0; padding: 0; }
 
-        .empty { text-align: center; color: #8c96a5; margin-top: 50px; font-size: 18px; padding: 40px; background: #151924; border-radius: 10px; border: 1px dashed #2a2e38; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(21, 25, 36, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid #2a2e38; }
+        .logo { font-size: 24px; font-weight: 800; color: var(--gold); letter-spacing: 1px; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: var(--gold); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+
+        .stats-bar { display: flex; justify-content: space-around; background: var(--panel-bg); padding: 20px; border-radius: 15px; margin-bottom: 30px; border: 1px solid #2a2e38; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .stat-item h2 { margin: 0; color: var(--gem-color); font-size: 28px; }
+        .stat-item p { margin: 0; font-size: 13px; color: #8c96a5; font-weight: 600; }
+
+        .card { background: var(--panel-bg); border: 1px solid #2a2e38; border-radius: 12px; padding: 20px; margin-bottom: 20px; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
-        /* Loading Spinner */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #00e701; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .txn-card { display: flex; justify-content: space-between; align-items: center; background: #1a1f2c; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; }
+        .user-tag { background: #0b0e14; padding: 4px 10px; border-radius: 6px; color: var(--gem-color); font-size: 14px; border: 1px solid #2a2e38; }
+
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; text-transform: uppercase; transition: 0.3s; }
+        .btn-approve { background: var(--gem-color); color: #000; }
+        .btn-reject { background: var(--mine-color); color: #fff; }
+
+        input { background: #0b0e14; border: 1px solid #2a2e38; color: white; padding: 12px; border-radius: 8px; outline: none; width: 100%; }
+        input:focus { border-color: var(--gold); }
+
+        #admin-login-overlay { position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; display:flex; justify-content:center; align-items:center; background: var(--bg-main); }
+        .login-box { background: var(--panel-bg); padding: 40px; border-radius: 20px; border: 1px solid var(--gold); text-align: center; }
     </style>
 </head>
 <body>
-    <div id="admin-login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; justify-content:center; align-items:center;">
-    <div style="background:#222; padding:30px; border-radius:10px; text-align:center; border:1px solid #ff0055;">
-        <h2 style="color:#fff; margin-bottom:20px;">Admin Access Only</h2>
-        <input type="password" id="admin-pass" placeholder="Enter Admin Password" style="padding:10px; width:200px; border-radius:5px; border:none; margin-bottom:15px;"><br>
-        <button onclick="checkAdminPass()" style="padding:10px 30px; background:#ff0055; color:#fff; border:none; border-radius:5px; cursor:pointer;">Login</button>
+
+    <div id="admin-login-overlay">
+        <div class="login-box">
+            <h2 style="color:var(--gold);">Admin Terminal</h2>
+            <input type="password" id="admin-pass" placeholder="Enter System Key" style="margin: 20px 0;">
+            <button onclick="checkAdminPass()" class="btn btn-approve" style="width:100%;">Login</button>
+        </div>
     </div>
-</div>
+
+    <nav>
+        <div class="logo">💣 Build x Mines</div>
+        <div style="color: var(--gold); font-weight: bold;">ADMIN PANEL</div>
+    </nav>
+
     <div class="container">
-        <h1>👑 Admin Control Room</h1>
+        <h1>Control Dashboard</h1>
         
         <div class="stats-bar">
             <div class="stat-item">
                 <h2 id="total-pending">0</h2>
-                <p>Pending Requests</p>
+                <p>Pending Tasks</p>
             </div>
-            <button class="btn" style="background: #2a2e38; color: white;" onclick="loadPendingTxns()">🔄 Refresh List</button>
+            <div class="stat-item">
+                <h2 id="total-revenue">₹0</h2>
+                <p>Total Balance (All Users)</p>
+            </div>
+            <button class="btn" style="background: #2a2e38; color: white; font-size: 12px;" onclick="refreshAdminData()">🔄 Refresh All</button>
         </div>
 
-        <div id="txn-list">
-            <div class="loader"></div>
-            <p style="text-align: center;">Fetching database records...</p>
+        <div class="card" style="border-color: var(--gold);">
+            <h3 style="color: var(--gold);">🎁 Master Gift Generator</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <input type="text" id="new-gift-code" placeholder="Code (e.g. WIN50)">
+                <input type="number" id="gift-amount" placeholder="Amount (₹)">
+                <input type="number" id="gift-limit" placeholder="User Limit" value="50">
+                <input type="number" id="gift-expiry" placeholder="Expiry (Days)">
+            </div>
+            <button class="btn btn-approve" onclick="createGiftCode()" style="width: 100%; margin-top: 15px;">Activate Code</button>
+            <p id="gift-status" style="text-align:center; margin-top:10px;"></p>
+        </div>
+                        <div class="card" style="display: block; border: 1px solid var(--gem-color);">
+    <h3 style="color: var(--gem-color); margin-bottom: 15px;">🔗 Referral Control Center</h3>
+    
+    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: #0b0e14; padding: 15px; border-radius: 10px;">
+        <label>Set Referral Reward (₹):</label>
+        <input type="number" id="ref-reward-input" placeholder="e.g. 20" style="width: 100px;">
+        <button class="btn btn-approve" onclick="updateRefSettings()" style="padding: 10px;">UPDATE</button>
+    </div>
+
+    <h4 style="color: var(--gold);">🔝 Top Promoters</h4>
+    <table style="width: 100%; color: white; border-collapse: collapse; font-size: 14px; margin-top: 10px;">
+        <thead>
+            <tr style="color: #8c96a5; border-bottom: 1px solid #333; text-align: left;">
+                <th style="padding: 10px;">User Phone</th>
+                <th style="padding: 10px; text-align: center;">Total Refers</th>
+                <th style="padding: 10px; text-align: right;">Total Earned</th>
+            </tr>
+        </thead>
+        <tbody id="referral-list-body">
+            </tbody>
+    </table>
+</div>
+        <div class="card">
+            <h3 style="color: var(--gold);">📊 Active Gift Codes</h3>
+            <table style="width: 100%; color: white; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="color: #8c96a5; border-bottom: 1px solid #333; text-align: left;">
+                        <th style="padding: 10px;">Code</th>
+                        <th style="padding: 10px;">Amount</th>
+                        <th style="padding: 10px; text-align: center;">Usage</th>
+                        <th style="padding: 10px; text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="gift-list-body"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3 style="color: var(--gold);">⏳ Pending Transactions</h3>
+            <div id="txn-list"></div>
         </div>
     </div>
 
     <script>
-        // Aapka Secret Password yahan set karein
-const SECRET_ADMIN_PASS = "s1o2h3e4l5"; // Isse apni marzi se badal lein
+        const SECRET_ADMIN_PASS = "s1o2h3e4l5";
 
-function checkAdminPass() {
-    const enteredPass = document.getElementById('admin-pass').value;
-    
-    if (enteredPass === SECRET_ADMIN_PASS) {
-        // Sahi password par overlay hata do
-        document.getElementById('admin-login-overlay').style.display = 'none';
-        sessionStorage.setItem('adminAuthenticated', 'true');
-    } else {
-        alert("Galat Password! Access Denied.");
-        window.location.href = "/index.html"; // Galat hone par home page bhej do
-    }
+        function checkAdminPass() {
+            if (document.getElementById('admin-pass').value === SECRET_ADMIN_PASS) {
+                document.getElementById('admin-login-overlay').style.display = 'none';
+                refreshAdminData();
+            } else { alert("Galat Password!"); }
+        }
+
+        async function refreshAdminData() {
+            loadPendingTxns();
+            loadGiftCodes();
+        }
+
+        async function loadPendingTxns() {
+            const list = document.getElementById('txn-list');
+            const res = await fetch('/api/admin/transactions');
+            const data = await res.json();
+            document.getElementById('total-pending').innerText = data.pendingTxns.length;
+            list.innerHTML = data.pendingTxns.length ? '' : '<p style="text-align:center;color:#888;">All clear!</p>';
+            
+            data.pendingTxns.forEach(txn => {
+                list.innerHTML += `
+                    <div class="txn-card">
+                        <div>
+                            <div style="font-weight:bold;">${txn.type} <span class="user-tag">${txn.userPhone}</span></div>
+                            <small style="color:#888;">${txn.id || txn.upi}</small>
+                        </div>
+                        <div style="font-weight:bold; color:${txn.type=='Deposit'?'#00e701':'#ff2a2a'}">₹${txn.amount}</div>
+                        <div>
+                            <button onclick="takeAction('${txn.id}', 'Approve', '${txn.userPhone}')" class="btn btn-approve" style="padding:5px 10px;">OK</button>
+                            <button onclick="takeAction('${txn.id}', 'Reject', '${txn.userPhone}')" class="btn btn-reject" style="padding:5px 10px;">X</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function createGiftCode() {
+            const code = document.getElementById('new-gift-code').value;
+            const amount = document.getElementById('gift-amount').value;
+            const usageLimit = document.getElementById('gift-limit').value;
+            const expiryDays = document.getElementById('gift-expiry').value;
+
+            const res = await fetch('/api/admin/create-gift', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ code, amount, usageLimit, expiryDays })
+            });
+            const data = await res.json();
+            if(data.success) { alert("Code Created!"); loadGiftCodes(); }
+        }
+
+        async function loadGiftCodes() {
+            const res = await fetch('/api/admin/gift-codes');
+            const data = await res.json();
+            const tbody = document.getElementById('gift-list-body');
+            tbody.innerHTML = data.codes.map(gift => `
+                <tr style="border-bottom: 1px solid #222;">
+                    <td style="padding: 10px; color: var(--gold); font-weight:bold;">${gift.code}</td>
+                    <td style="padding: 10px;">₹${gift.amount}</td>
+                    <td style="padding: 10px; text-align: center;">${gift.usedCount} / ${gift.usageLimit}</td>
+                    <td style="padding: 10px; text-align: right;">
+                        <button onclick="deleteGiftCode('${gift._id}')" style="background:none; border:none; color:red; cursor:pointer;">🗑️</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function deleteGiftCode(id) {
+            if(confirm("Delete Code?")) {
+                await fetch(`/api/admin/delete-gift/${id}`, { method: 'DELETE' });
+                loadGiftCodes();
+            }
+        }
+
+        async function takeAction(txnId, action, userPhone) {
+            await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ txnId, action, userPhone })
+            });
+            loadPendingTxns();
+        }
+
+        window.onload = () => { document.getElementById('admin-login-overlay').style.display = 'flex'; };
+        // Referral data load karne ka function
+async function loadReferralStats() {
+    try {
+        const res = await fetch('/api/admin/referral-stats');
+        const data = await res.json();
+        const tbody = document.getElementById('referral-list-body');
+        tbody.innerHTML = '';
+
+        data.topReferrers.forEach(user => {
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid #222;">
+                    <td style="padding: 12px;">${user.phone}</td>
+                    <td style="padding: 12px; text-align: center; color: var(--gem-color); font-weight: bold;">${user.referralCount}</td>
+                    <td style="padding: 12px; text-align: right; color: var(--gold);">₹${user.referralEarnings}</td>
+                </tr>`;
+        });
+    } catch (e) { console.error("Referral stats error"); }
 }
 
-// Page load par check karein ki kya pehle login kiya tha
-window.onload = function() {
-    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
-        document.getElementById('admin-login-overlay').style.display = 'none';
-    }
-};
-        // 1. Database se Pending Requests lana
-        async function loadPendingTxns() {
-            const listContainer = document.getElementById('txn-list');
-            
-            try {
-                const res = await fetch('/api/admin/transactions');
-                const data = await res.json();
-                
-                if (!data.success) {
-                    listContainer.innerHTML = `<div class="empty">Error: ${data.message}</div>`;
-                    return;
-                }
+// Reward amount update karne ka (Abhi ke liye prompt se ya local storage se handle kar sakte hain)
+function updateRefSettings() {
+    const amt = document.getElementById('ref-reward-input').value;
+    if(!amt) return alert("Amount daalo bhai!");
+    
+    // Server ko settings bhejne ka API (Optional, ya direct server.js mein change karein)
+    alert("Reward ₹" + amt + " set ho gaya! (Make sure server.js matches this)");
+}
 
-                document.getElementById('total-pending').innerText = data.pendingTxns.length;
-                listContainer.innerHTML = '';
-
-                if (data.pendingTxns.length === 0) {
-                    listContainer.innerHTML = '<div class="empty">🎉 All clear! No pending requests.</div>';
-                    return;
-                }
-
-                // Har request ke liye card banana
-                data.pendingTxns.forEach(txn => {
-                    const isDep = txn.type === 'Deposit';
-                    const colorClass = isDep ? 'dep-color' : 'wth-color';
-                    const sign = isDep ? '+' : '-';
-                    const displayId = isDep ? `UTR: ${txn.id}` : `UPI: ${txn.upi}`;
-
-                    listContainer.innerHTML += `
-                        <div class="card">
-                            <div class="details">
-                                <h3>${txn.type} <span class="user-tag">${txn.userPhone}</span></h3>
-                                <p>${displayId}</p>
-                                <p>Date: ${txn.date}</p>
-                            </div>
-                            <div class="amount-section">
-                                <div class="amount ${colorClass}">${sign}₹${txn.amount}</div>
-                                <p style="font-size:10px; margin:0;">+ ₹${txn.bonus || 0} Bonus</p>
-                            </div>
-                            <div class="actions">
-                                <button class="btn btn-approve" onclick="takeAction('${txn.id}', 'Approve', '${txn.userPhone}')">APPROVE</button>
-                                <button class="btn btn-reject" onclick="takeAction('${txn.id}', 'Reject', '${txn.userPhone}')">REJECT</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                listContainer.innerHTML = `<div class="empty">Connection Failed. Make sure server is running!</div>`;
-            }
-        }
-
-        // 2. Approve ya Reject action lena
-        async function takeAction(txnId, action, userPhone) {
-            const confirmMsg = `Are you sure you want to ${action} this transaction for user ${userPhone}?`;
-            if (!confirm(confirmMsg)) return;
-
-            try {
-                const res = await fetch('/api/admin/action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        txnId: txnId, 
-                        action: action, 
-                        userPhone: userPhone // Yeh server ko batayega kis user ka balance update karna hai
-                    })
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    alert(`✅ Done: Transaction ${action} successfully!`);
-                    loadPendingTxns(); // List update karo
-                } else {
-                    alert(`❌ Error: ${data.message}`);
-                }
-            } catch (err) {
-                alert("Server connection error!");
-            }
-        }
-
-        // Page load hote hi data dikhao
-        loadPendingTxns();
-        
-        // Auto-refresh har 30 second me
-        setInterval(loadPendingTxns, 30000);
+// RefreshAdminData() function mein isse bhi add kar dena
+// async function refreshAdminData() { ... loadReferralStats(); ... }
     </script>
 </body>
 </html>

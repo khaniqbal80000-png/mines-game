@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login & Register</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -99,70 +99,86 @@
     </div>
 
    <script>
-        function toggleForm(type) {
-            document.getElementById('login-form').classList.remove('active');
-            document.getElementById('register-form').classList.remove('active');
-            
-            if(type === 'register') {
-                document.getElementById('register-form').classList.add('active');
-            } else {
-                document.getElementById('login-form').classList.add('active');
-            }
+    // --- 1. Referral Tracking Logic ---
+    // Page load hote hi check karo ki kya link mein 'ref' code hai
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCodeFromURL = urlParams.get('ref');
+
+    if (refCodeFromURL) {
+        // Referral code ko browser ki memory mein save kar lo
+        localStorage.setItem('tempRef', refCodeFromURL);
+        console.log("Referral detected:", refCodeFromURL);
+    }
+
+    // --- 2. Registration Function ---
+    async function register() {
+        const name = document.getElementById('reg-name').value;
+        const phone = document.getElementById('reg-phone').value;
+        const password = document.getElementById('reg-pass').value;
+        
+        // Browser ki memory se referral code uthao (agar hai toh)
+        const savedRef = localStorage.getItem('tempRef');
+
+        if (!name || !phone || !password) {
+            return alert("Saari details bharo bhai!");
         }
 
-        // ================================
-        // ASLI LOGIN LOGIC
-        // ================================
-        async function login() {
-            const phone = document.getElementById('login-id').value;
-            const password = document.getElementById('login-pass').value;
-            
-            if(!phone || !password) return alert('Kripya apna Number aur Password daalein.');
-
-            // Server ko details bhejna check karne ke liye
-            const response = await fetch('/api/login', {
+        try {
+            const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: phone, password: password })
+                body: JSON.stringify({ 
+                    name: name, 
+                    phone: phone, 
+                    password: password, 
+                    refCode: savedRef // Yeh line referral connect karegi
+                })
             });
-            const data = await response.json();
 
-            if(data.success) {
-                // Agar password sahi hai: Browser me user ka number save karo aur game me bhejo
-                localStorage.setItem('currentUser', data.userId);
-                alert(data.message);
-                window.location.href = '/game.html';
+            const data = await res.json();
+
+            if (data.success) {
+                alert("🎉 Account ban gaya! Ab login karein.");
+                // Registration ke baad referral memory saaf kar do
+                localStorage.removeItem('tempRef');
+                showLogin(); // Login screen par le jao
             } else {
-                // Agar password galat hai: Screen par error dikhao
                 alert(data.message);
             }
+        } catch (e) {
+            alert("Server error! Baad mein try karein.");
         }
+    }
 
-        // ================================
-        // ASLI REGISTER LOGIC
-        // ================================
-        async function register() {
-            const name = document.getElementById('reg-name').value;
-            const phone = document.getElementById('reg-phone').value;
-            const password = document.getElementById('reg-pass').value;
+    // --- 3. Login Function (Same rahega) ---
+    async function login() {
+        const phone = document.getElementById('login-phone').value;
+        const password = document.getElementById('login-pass').value;
 
-            if(!name || !phone || !password) return alert('Kripya saari details bharein.');
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, password })
+        });
 
-            // Naya account database me banane ke liye server ko bhejna
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, password })
-            });
-            const data = await response.json();
-
-            if(data.success) {
-                alert(data.message);
-                toggleForm('login'); // Account banne ke baad usko login form par bhej do
-            } else {
-                alert(data.message); // Agar number pehle se exist karta hai
-            }
+        const data = await res.json();
+        if (data.success) {
+            localStorage.setItem('currentUser', data.userId);
+            window.location.href = '/game.html';
+        } else {
+            alert(data.message);
         }
+    }
+
+    // UI Toggle Functions
+    function showRegister() {
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'block';
+    }
+    function showLogin() {
+        document.getElementById('login-form').style.display = 'block';
+        document.getElementById('register-form').style.display = 'none';
+    }
     </script>
 </body>
 </html>

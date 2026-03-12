@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mines Wallet | Deposit & Withdraw</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -49,6 +49,19 @@
         .bonus-text { font-size: 12px; color: #aaa; text-align: center; }
         nav { text-align: center; margin-bottom: 20px; }
         nav a { color: var(--gold); text-decoration: none; margin: 0 10px; font-weight: bold; }
+    body {
+        background-color: #0b0e14; /* Game wala dark background */
+        color: white;
+        font-family: 'Poppins', sans-serif;
+    }
+    .container {
+        background: #151924; /* Panel wala background */
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #2a2e38;
+        max-width: 500px;
+        margin: 50px auto;
+    }
     </style>
 </head>
 <body>
@@ -81,7 +94,11 @@
                     <p style="color: var(--gold); font-weight: bold; margin-top: 0;">UPI: 7689042786@fam</p>
                 </div>
                 
-                <input type="number" id="dep-amount" placeholder="Amount (Min ₹100)" required>
+                <div class="input-group">
+    <label>Deposit Amount</label>
+    <input type="number" id="dep-amount" placeholder="Amount (Min ₹100)">
+    <small style="color: #8c96a5; font-size: 11px;">*Minimum deposit ₹100 zaroori hai.</small>
+</div>
                 <input type="text" id="dep-utr" placeholder="Enter 12-Digit UTR Number" required>
                 <p class="bonus-text">✨ Get ₹10 Bonus on every ₹100 deposit!</p>
                 <button onclick="handleDeposit()">Deposit</button>
