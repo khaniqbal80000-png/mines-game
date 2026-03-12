@@ -180,24 +180,28 @@
         <div class="balance-badge" id="top-balance">₹0.00</div>
 <script>
 async function redeemGift() {
-    const code = document.getElementById('gift-input').value;
+    const codeInput = document.getElementById('gift-input'); // Fixed ID
+    const code = codeInput.value.trim();
     const userId = localStorage.getItem('currentUser');
 
     if(!code) return alert("Code toh daalo bhai!");
 
-    const res = await fetch('/api/redeem-gift', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ code, userId })
-    });
-    
-    const data = await res.json();
-    if(data.success) {
+    try {
+        const res = await fetch('/api/redeem-gift', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code: code, userId: userId }) // Match with server
+        });
+        
+        const data = await res.json();
         alert(data.message);
-        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-        document.getElementById('gift-input').value = ''; // Clear box
-    } else {
-        alert(data.message);
+        
+        if(data.success) {
+            fetchBalance(); // Balance update karo
+            codeInput.value = ''; // Input box khali karo
+        }
+    } catch (e) {
+        alert("Server se connection nahi ho paya!");
     }
 }
 </script>
@@ -210,29 +214,36 @@ async function redeemGift() {
                 
     <div class="main-container">
         <div class="controls">
-            <div class="input-group"><label>Bet Amount (₹)</label><input type="number" id="bet" value="10"></div>
-            <div class="input-group"><label>Number of Mines</label><input type="number" id="mine-count" value="3"></div>
-            <button id="start-btn" class="btn btn-bet" onclick="startGame()">Bet</button>
-            <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()">Cash Out</button> 
-             <div class="gift-section" style="margin-top:20px; background:#1a1a1a; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
-    <h4 style="color:var(--gold); margin:0 0 10px 0;">🎁 Have a Gift Code?</h4>
-    <input type="text" id="gift-input" placeholder="Enter Code (e.g. FREE50)" style="width:70%; padding:10px; border-radius:5px; border:none;">
-    <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Claim</button>
-</div> 
-            <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
-    <h3 style="color: #e6c27a; margin-top: 0;">🔗 Refer & Earn</h3>
-    <p style="font-size: 12px; color: #8c96a5;">Refer a friend and earn ₹20 when they make their first deposit!</p>
-    
-    <div style="background: #0b0e14; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; margin: 15px 0;">
-        <span id="my-ref-link" style="color: #00e701; font-weight: bold; font-size: 13px;">Loading Link...</span>
+    <div class="input-group">
+        <label>Bet Amount (₹)</label>
+        <input type="number" id="bet" value="10" min="10">
     </div>
-    
-    <button onclick="copyMyLink()" class="btn btn-bet" style="padding: 10px 20px; width: auto; font-size: 14px;">
-        COPY & SHARE
-    </button>
-</div>
 
+    <div class="input-group">
+        <label>Number of Mines</label>
+        <input type="number" id="mine-count" value="3" min="1" max="24">
+    </div>
+
+    <button id="start-btn" class="btn btn-bet" onclick="startGame()">Bet</button>
+    <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()" style="display:none;">Cash Out</button> 
+
+    <div class="gift-section" style="margin-top:20px; background:#1a1a1a; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
+        <h4 style="color:var(--gold); margin:0 0 10px 0;">🎁 Have a Gift Code?</h4>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="gift-input" placeholder="Enter Code" style="flex: 1; padding:10px; border-radius:5px; border:none; background: #0b0e14; color: white;">
+            <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold; color: #000;">Claim</button>
         </div>
+    </div> 
+
+    <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
+        <h3 style="color: #e6c27a; margin-top: 0; font-size: 16px;">🔗 Refer & Earn</h3>
+        <p style="font-size: 11px; color: #8c96a5;">Refer a friend and earn ₹20 when they make their first deposit!</p>
+        <div style="background: #0b0e14; padding: 10px; border-radius: 8px; border: 1px solid #2a2e38; margin: 15px 0; overflow: hidden;">
+            <span id="my-ref-link" style="color: #00e701; font-weight: bold; font-size: 11px;">Loading Link...</span>
+        </div>
+        <button onclick="copyMyLink()" class="btn btn-bet" style="padding: 10px 20px; width: auto; font-size: 12px;">COPY LINK</button>
+    </div>
+</div>
         <div class="game-area">
             <div class="status-bar">
                 <div class="status-box"><div>Multiplier</div><div class="status-value" id="multiplier">1.00x</div></div>
