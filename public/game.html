@@ -7,6 +7,56 @@
     <link rel="icon" type="image/png" href="https://th.bing.com/th/id/OIG4.ik49zs_d.8zxz4I9PTxc?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
+        /* Mobile View Fixes */
+@media (max-width: 600px) {
+    .main-container {
+        flex-direction: column-reverse; /* Controls niche aayenge, board upar */
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .game-area {
+        padding: 15px;
+        width: 100%;
+    }
+
+    /* Grid ko screen mein fit karna */
+    .grid {
+        grid-template-columns: repeat(5, 1fr); 
+        gap: 6px;
+        width: 100%;
+        max-width: 320px; /* Phone screen ke hisab se */
+    }
+
+    .cell {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1; /* Hamesha square rahega */
+        font-size: 18px;
+    }
+
+    .controls {
+        width: 100%;
+        padding: 15px;
+    }
+
+    .status-bar {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+
+    .status-value {
+        font-size: 18px;
+    }
+
+    nav {
+        padding: 10px 15px;
+    }
+
+    .logo {
+        font-size: 18px;
+    }
+}
         :root {
             --gold: #e6c27a;
             --gold-glow: rgba(230, 194, 122, 0.4);
@@ -26,6 +76,7 @@
             overflow-x: hidden;
         }
 
+        /* Nav & Layout */
         nav { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 15px 30px; background: rgba(21, 25, 36, 0.8); backdrop-filter: blur(10px);
@@ -36,11 +87,11 @@
             background: rgba(230, 194, 122, 0.1); border: 1px solid var(--gold);
             padding: 8px 20px; border-radius: 20px; color: var(--gold); font-weight: bold;
         }
-
         .main-container {
             display: flex; flex: 1; max-width: 1200px; margin: 40px auto; width: 100%; gap: 30px; padding: 0 20px;
         }
 
+        /* Controls */
         .controls {
             width: 320px; background: var(--panel-bg); padding: 25px; border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 20px;
@@ -58,6 +109,7 @@
         .btn-bet { background: var(--gold); color: #000; }
         .btn-cashout { background: var(--gem-color); color: #000; display: none; }
 
+        /* Game Area */
         .game-area {
             flex: 1; background: var(--panel-bg); border-radius: 15px; padding: 40px;
             display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -76,125 +128,138 @@
         }
         .cell:hover { background: var(--cell-hover); }
 
-        /* Referral Card */
-        .card { 
-            margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; 
-            background: #151924; border-radius: 15px; 
-        }
-
-        /* Mobile View Fixes */
+        /* Mobile View */
         @media (max-width: 800px) {
-            .main-container { flex-direction: column-reverse; align-items: center; padding: 10px; }
-            .grid { 
-                grid-template-columns: repeat(5, 1fr); 
-                width: 100%; 
-                max-width: 320px; 
-                gap: 6px; 
-            }
+            .main-container { flex-direction: column-reverse; align-items: center; }
+            .grid { grid-template-columns: repeat(5, 1fr); width: 100%; max-width: 380px; gap: 8px; }
             .cell { width: 100% !important; height: auto !important; aspect-ratio: 1/1; font-size: 20px; }
-            .controls { width: 100%; padding: 15px; }
-            .game-area { padding: 20px; width: 100%; }
-            .status-value { font-size: 18px; }
+            .controls { width: 100%; }
         }
 
-        /* FX */
+        /* Extra FX */
         .particle { position: absolute; width: 6px; height: 6px; background: var(--gem-color); border-radius: 50%; pointer-events: none; animation: burst 0.6s forwards; }
         @keyframes burst { to { transform: translate(var(--x), var(--y)); opacity: 0; } }
         .winner-ticker { width: 100%; background: #000; color: #00ff00; padding: 10px 0; overflow: hidden; margin-top: 20px; }
         #ticker-content { display: inline-block; white-space: nowrap; animation: scroll-left 15s linear infinite; font-weight: bold; }
         @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        
         .nav-links a { 
-            color: #8c96a5; text-decoration: none; margin-left: 15px; font-weight: 600; font-size: 14px;
-        }
-        .nav-links a:hover { color: var(--gold); }
+    color: #8c96a5; /* Light greyish colour */
+    text-decoration: none; 
+    margin-left: 20px; 
+    font-weight: 600; 
+    transition: 0.3s; 
+    font-size: 14px;
+}
 
-        /* Modals */
-        .modal-overlay {
-            display:none; position:fixed; z-index:20000; left:0; top:0; width:100%; height:100%; 
-            background:rgba(0,0,0,0.9); justify-content: center; align-items: center;
-        }
+.nav-links a:hover { 
+    color: var(--gold); /* Hover karne par gold chamkega */
+    text-shadow: 0 0 10px var(--gold-glow);
+}
     </style>
 </head>
 <body>
 
-    <div id="bonus-modal" class="modal-overlay">
-        <div style="background:#1a1a1a; padding:30px; border:2px solid var(--gem-color); width:85%; max-width:320px; border-radius:20px; text-align: center; box-shadow: 0 0 20px var(--gem-color);">
-            <h2 style="color:var(--gem-color); margin: 0 0 10px 0;">🎁 WELCOME GIFT!</h2>
-            <div id="gift-box" onclick="claimBonus()" style="font-size:80px; cursor:pointer; animation: bounce 1s infinite; margin: 20px 0;">📦</div>
-            <p style="color:white; font-weight: 600;">Tap to open your ₹20 Bonus!</p>
+    <div id="event-modal" style="display:none; position:fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.8);">
+        <div style="background:#1a1a1a; margin:15% auto; padding:20px; border:2px solid gold; width:80%; max-width:400px; text-align:center; border-radius:15px;">
+            <h2 style="color:gold;">🏆 MINES TOURNAMENT</h2>
+            <p style="color:white;" id="event-text">Join now!</p>
+            <button onclick="closeEvent()" style="background:gold; padding:10px 20px; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">Play Now</button>
         </div>
     </div>
 
-    <div id="event-modal" style="display:none; position:fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85);">
-        <div style="background:#151924; margin:25% auto; padding:25px; border:1px solid var(--gold); width:85%; max-width:400px; text-align:center; border-radius:15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-            <h2 style="color:var(--gold); margin:0 0 15px 0;">🏆 MINES TOURNAMENT</h2>
-            <p style="color:#8c96a5;" id="event-text">Loading event...</p>
-            <button onclick="closeEvent()" style="background:var(--gold); padding:12px 25px; border:none; cursor:pointer; font-weight:800; border-radius:8px; margin-top:15px; width: 100%;">PLAY NOW</button>
+    <div id="bonus-modal" style="display:none; position:fixed; z-index:20000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); text-align:center;">
+        <div style="background:#1a1a1a; margin:20% auto; padding:30px; border:2px solid #66fcf1; width:80%; max-width:300px; border-radius:20px; box-shadow: 0 0 20px #66fcf1;">
+            <h2 style="color:#66fcf1;">🎁 WELCOME GIFT!</h2>
+            <div id="gift-box" onclick="claimBonus()" style="font-size:80px; cursor:pointer; transition:0.3s; animation: bounce 1s infinite;">📦</div>
+            <p style="color:white; margin-top:20px;">Open for Bonus!</p>
         </div>
     </div>
 
     <nav>
-        <div class="logo">💣 Mines</div>
+        <div class="logo">💣 Build x Mines</div>
         <div class="balance-badge" id="top-balance">₹0.00</div>
+<script>
+async function redeemGift() {
+    const code = document.getElementById('gift-input').value;
+    const userId = localStorage.getItem('currentUser');
+
+    if(!code) return alert("Code toh daalo bhai!");
+
+    const res = await fetch('/api/redeem-gift', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ code, userId })
+    });
+    
+    const data = await res.json();
+    if(data.success) {
+        alert(data.message);
+        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+        document.getElementById('gift-input').value = ''; // Clear box
+    } else {
+        alert(data.message);
+    }
+}
+</script>
         <div class="nav-links">
             <a href="/wallet.html">Wallet</a>
-            <a href="/index.html" onclick="localStorage.clear()">Logout</a>
+            <a href="/history.html">History</a>
+            <a href="/index.html">Logout</a>
         </div>
     </nav>
                 
     <div class="main-container">
         <div class="controls">
-            <div class="input-group">
-                <label>Bet Amount (₹)</label>
-                <input type="number" id="bet" value="10" min="10">
-            </div>
-            <div class="input-group">
-                <label>Mines Count</label>
-                <input type="number" id="mine-count" value="3" min="1" max="24">
-            </div>
-            
-            <button id="start-btn" class="btn btn-bet" onclick="startGame()">Place Bet</button>
+            <div class="input-group"><label>Bet Amount (₹)</label><input type="number" id="bet" value="10"></div>
+            <div class="input-group"><label>Number of Mines</label><input type="number" id="mine-count" value="3"></div>
+            <button id="start-btn" class="btn btn-bet" onclick="startGame()">Bet</button>
             <button id="cashout-btn" class="btn btn-cashout" onclick="cashOut()">Cash Out</button> 
+             <div class="gift-section" style="margin-top:20px; background:#1a1a1a; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
+    <h4 style="color:var(--gold); margin:0 0 10px 0;">🎁 Have a Gift Code?</h4>
+    <input type="text" id="gift-input" placeholder="Enter Code (e.g. FREE50)" style="width:70%; padding:10px; border-radius:5px; border:none;">
+    <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Claim</button>
+</div> 
+            <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
+    <h3 style="color: #e6c27a; margin-top: 0;">🔗 Refer & Earn</h3>
+    <p style="font-size: 12px; color: #8c96a5;">Refer a friend and earn ₹20 when they make their first deposit!</p>
+    
+    <div style="background: #0b0e14; padding: 12px; border-radius: 8px; border: 1px solid #2a2e38; margin: 15px 0;">
+        <span id="my-ref-link" style="color: #00e701; font-weight: bold; font-size: 13px;">Loading Link...</span>
+    </div>
+    
+    <button onclick="copyMyLink()" class="btn btn-bet" style="padding: 10px 20px; width: auto; font-size: 14px;">
+        COPY & SHARE
+    </button>
+</div>
 
-            <div class="gift-section" style="margin-top:10px; background:#0b0e14; padding:15px; border-radius:10px; border:1px dashed var(--gold);">
-                <h4 style="color:var(--gold); margin:0 0 10px 0; font-size:13px;">🎁 Promo Code</h4>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="gift-input" placeholder="Enter Code" style="flex:1; padding:10px; border-radius:5px; border:1px solid #2a2e38; background:#151924; color:white;">
-                    <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Claim</button>
-                </div>
-            </div> 
-
-            <div class="card">
-                <h3 style="color: #e6c27a; margin-top: 0; font-size: 16px;">🔗 Refer & Earn</h3>
-                <p style="font-size: 11px; color: #8c96a5;">Share your link and get ₹20 when they deposit!</p>
-                <div style="background: #0b0e14; padding: 10px; border-radius: 8px; border: 1px solid #2a2e38; margin: 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <span id="my-ref-link" style="color: #00e701; font-weight: bold; font-size: 11px;">Link...</span>
-                </div>
-                <button onclick="copyMyLink()" style="background:var(--gold); border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:12px;">COPY LINK</button>
-            </div>
         </div>
-
         <div class="game-area">
             <div class="status-bar">
                 <div class="status-box"><div>Multiplier</div><div class="status-value" id="multiplier">1.00x</div></div>
-                <div class="status-box"><div>Profit</div><div class="status-value" style="color:var(--gem-color);" id="profit">₹0.00</div></div>
+                <div class="status-box"><div>Live Profit</div><div class="status-value" style="color:#00ff00;" id="profit">₹0.00</div></div>
             </div>
             <div class="grid" id="game-board"></div>
             
-            <div style="margin-top:40px; background:rgba(0,0,0,0.3); padding:20px; border-radius:15px; width:100%;">
-                <h3 style="color:var(--gold); text-align:center; margin-top:0;">🏆 Top Winners</h3>
-                <table style="width:100%; color:white; border-collapse:collapse; font-size: 14px;">
-                    <tbody id="leaderboard-body">
-                        <tr><td colspan="2" style="text-align:center; padding:10px; color:#8c96a5;">Loading results...</td></tr>
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
+     <div class="leaderboard-container" style="margin-top:30px; background:#1a1a1a; padding:15px; border-radius:12px; width:100%;">
+                <h3 style="color:gold; text-align:center;">🏆 Today's Top Winners</h3>
+                <table style="width:100%; color:white; border-collapse:collapse;"><tbody id="leaderboard-body"></tbody></table>
+            </div>
 
-    <div class="winner-ticker"><div id="ticker-content">Loading live wins... | Connecting to secure server... | Provably Fair Gaming...</div></div>
+            <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
 
+<script>
+    // User ka phone number hi unka referral code hai
+    const userPhone = localStorage.getItem('currentUser');
+    const myLink = "https://build-x-mines.onrender.com?ref=" + userPhone;
+    document.getElementById('my-ref-link').innerText = myLink;
+
+    function copyMyLink() {
+        navigator.clipboard.writeText(myLink);
+        alert("Referral Link Copy ho gaya! WhatsApp par share karein.");
+    }
+</script>
     <script>
         const currentUser = localStorage.getItem('currentUser');
         if (!currentUser) window.location.href = '/index.html';
@@ -206,100 +271,28 @@
         const winSound = new Audio('gem.mp3');
         const loseSound = new Audio('bomb.mp3');
 
-        // Initial Load
-        window.onload = function() {
+        window.addEventListener('load', async () => {
             fetchBalance();
             updateLeaderboard();
-            checkBonus();
-            setupReferral();
             showEvent("Tournament: 10 Mines ke sath ₹500 Bonus jeetein!");
-            createBoard();
-        };
-
-        function setupReferral() {
-            const myLink = window.location.origin + "/index.html?ref=" + currentUser;
-            document.getElementById('my-ref-link').innerText = myLink;
-        }
-
-        function copyMyLink() {
-            const link = document.getElementById('my-ref-link').innerText;
-            navigator.clipboard.writeText(link);
-            alert("Referral link copy ho gaya!");
-        }
+            checkBonus();
+        });
 
         async function fetchBalance() {
-            const res = await fetch('/api/user', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: currentUser }) 
-            });
+            const res = await fetch('/api/user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser }) });
             const data = await res.json();
-            if(data.success) {
-                document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
-            }
+            if(data.success) document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
         }
 
         async function updateLeaderboard() {
-            try {
-                const res = await fetch('/api/leaderboard');
-                const data = await res.json();
-                const tbody = document.getElementById('leaderboard-body');
-                if(!data.length) return;
-                
-                tbody.innerHTML = data.map((u, i) => `
-                    <tr style="border-bottom: 1px solid #222;">
-                        <td style="padding: 10px;">${i+1}. ${u.phone}</td>
-                        <td style="padding: 10px; text-align: right; color: var(--gem-color); font-weight: bold;">₹${u.totalProfit.toFixed(2)}</td>
-                    </tr>`).join('');
-            } catch(e) {}
-        }
-
-        async function redeemGift() {
-            const code = document.getElementById('gift-input').value.trim();
-            if(!code) return alert("Pehle code daalein!");
-
-            const res = await fetch('/api/redeem-gift', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code, userId: currentUser })
-            });
+            const res = await fetch('/api/leaderboard');
             const data = await res.json();
-            alert(data.message);
-            if(data.success) {
-                fetchBalance();
-                document.getElementById('gift-input').value = '';
-            }
-        }
-
-        async function checkBonus() {
-            const res = await fetch('/api/check-bonus', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: currentUser }) 
-            });
-            const data = await res.json();
-            if(data.isNewUser) {
-                document.getElementById('bonus-modal').style.display = 'flex';
-            }
-        }
-
-        async function claimBonus() {
-            const giftBox = document.getElementById('gift-box');
-            giftBox.innerHTML = "💎";
-            giftBox.style.animation = "none";
-            
-            const res = await fetch('/api/claim-bonus', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: currentUser, bonusAmount: 20 }) 
-            });
-            const data = await res.json();
-            if(data.success) {
-                fetchBalance();
-                setTimeout(() => {
-                    document.getElementById('bonus-modal').style.display = 'none';
-                }, 1000);
-            }
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = data.map((u, i) => `
+                <tr style="border-bottom: 1px solid #222;">
+                    <td style="padding: 8px;">${i+1}. ${u.phone}</td>
+                    <td style="padding: 8px; text-align: right; color: #00ff00;">₹${u.totalProfit.toFixed(2)}</td>
+                </tr>`).join('');
         }
 
         function createBoard() {
@@ -314,67 +307,70 @@
         }
 
         async function startGame() {
+            // Sound unlock for browser
+            winSound.play().then(() => { winSound.pause(); winSound.currentTime = 0; });
+            
             betAmount = parseFloat(document.getElementById('bet').value);
             const mCount = parseInt(document.getElementById('mine-count').value);
-            
-            if(betAmount < 10) return alert("Minimum bet ₹10 hai!");
-
-            const res = await fetch('/api/bet', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ betAmount, userId: currentUser }) 
-            });
+            const res = await fetch('/api/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ betAmount, userId: currentUser }) });
             const data = await res.json();
             if(!data.success) return alert(data.message);
             
-            fetchBalance();
-            isPlaying = true; 
-            currentMultiplier = 1.00;
+            document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+            isPlaying = true; currentMultiplier = 1.00;
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('cashout-btn').style.display = 'block';
             mines.clear();
             while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
-            createBoard(); 
-            updateStatusText();
+            createBoard(); updateStatusText();
         }
 
         function revealCell(cell, index) {
             if (!isPlaying || cell.classList.contains('revealed') || cell.classList.contains('mine')) return;
 
             if (mines.has(index)) {
-                loseSound.play();
+                loseSound.currentTime = 0; loseSound.play();
                 if(navigator.vibrate) navigator.vibrate(200);
                 cell.classList.add('mine'); cell.innerHTML = '💣';
                 endGame(false);
             } else {
                 winSound.currentTime = 0; winSound.play();
+                if(navigator.vibrate) navigator.vibrate(50);
                 cell.classList.add('revealed'); cell.innerHTML = '💎';
                 
-                const revealedCount = document.querySelectorAll('.cell.revealed').length;
-                
-                // Real Multiplier Logic
-                let rawMultiplier = (25 - (revealedCount - 1)) / (25 - mines.size - (revealedCount - 1));
-                currentMultiplier *= rawMultiplier;
-                
-                // Slight house edge adjustment
-                if(revealedCount === 1) currentMultiplier = (25 / (25 - mines.size)) * 0.98;
+                const rect = cell.getBoundingClientRect();
+                createParticles(rect.left + rect.width/2, rect.top + rect.height/2);
 
+                const revealedCount = document.querySelectorAll('.cell.revealed').length;
+                let rawMultiplier = (25 - (revealedCount - 1)) / (25 - mines.size - (revealedCount - 1));
+                currentMultiplier = rawMultiplier * 0.97;
+                if(revealedCount === 1) {
+                    if(mines.size === 1) currentMultiplier = 1.015;
+                    else if(mines.size === 3) currentMultiplier = 1.12;
+                    else if(mines.size === 5) currentMultiplier = 1.25;
+                }
                 updateStatusText();
+            }
+        }
+
+        function createParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                const p = document.createElement('div'); p.classList.add('particle');
+                p.style.setProperty('--x', (Math.random() - 0.5) * 100 + 'px');
+                p.style.setProperty('--y', (Math.random() - 0.5) * 100 + 'px');
+                p.style.left = x + 'px'; p.style.top = y + 'px';
+                document.body.appendChild(p); setTimeout(() => p.remove(), 600);
             }
         }
 
         async function cashOut() {
             if(!isPlaying) return;
             const winnings = betAmount * currentMultiplier;
-            const res = await fetch('/api/cashout', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ winnings, userId: currentUser }) 
-            });
+            const res = await fetch('/api/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ winnings, userId: currentUser }) });
             const data = await res.json();
             if(data.success) {
-                fetchBalance();
-                alert(`SUCCESS! Jeet gaye ₹${winnings.toFixed(2)}`);
+                document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+                alert(`Jeet gaye! ₹${winnings.toFixed(2)}`);
                 endGame(true);
             }
         }
@@ -384,8 +380,7 @@
             document.getElementById('start-btn').style.display = 'block';
             document.getElementById('cashout-btn').style.display = 'none';
             document.querySelectorAll('.cell').forEach(cell => {
-                const idx = parseInt(cell.dataset.index);
-                if (mines.has(idx)) {
+                if (mines.has(parseInt(cell.dataset.index))) {
                     cell.innerHTML = '💣'; cell.classList.add('mine');
                 }
             });
@@ -404,8 +399,22 @@
 
         function showEvent(msg) { document.getElementById('event-text').innerText = msg; document.getElementById('event-modal').style.display = 'block'; }
         function closeEvent() { document.getElementById('event-modal').style.display = 'none'; }
+        
+        async function checkBonus() {
+            const res = await fetch('/api/check-bonus', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser }) });
+            const data = await res.json();
+            if(data.isNewUser) document.getElementById('bonus-modal').style.display = 'block';
+        }
 
-        setInterval(updateLeaderboard, 10000);
+        async function claimBonus() {
+            document.getElementById('gift-box').innerHTML = "💎";
+            const res = await fetch('/api/claim-bonus', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser, bonusAmount: 20 }) });
+            const data = await res.json();
+            if(data.success) { fetchBalance(); setTimeout(() => document.getElementById('bonus-modal').style.display = 'none', 1000); }
+        }
+
+        createBoard();
+        setInterval(updateLeaderboard, 30000);
     </script>
 </body>
 </html>
