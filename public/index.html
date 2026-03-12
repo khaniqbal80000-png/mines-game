@@ -63,122 +63,111 @@
 <body>
 
     <div class="auth-container">
-        
-        <div id="login-form" class="form-box active">
-            <h2>Login</h2>
-            <div class="input-group">
-                <label>Mobile No. or Email</label>
-                <input type="text" id="login-id" placeholder="Enter your Mobile No. or Email" required>
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="login-pass" placeholder="Enter password" required>
-            </div>
-            <button onclick="login()">Login</button>
-            <div class="toggle-text" onclick="toggleForm('register')">Don't have an account? Sign Up</div>
+    <div id="login-form" class="form-box active">
+        <h2>Login</h2>
+        <div class="input-group">
+            <label>Mobile No.</label>
+            <input type="tel" id="login-phone" placeholder="Enter Mobile No." required>
         </div>
-
-        <div id="register-form" class="form-box">
-            <h2>Create Account</h2>
-            <div class="input-group">
-                <label>Full Name</label>
-                <input type="text" id="reg-name" placeholder="Enter your name" required>
-            </div>
-            <div class="input-group">
-                <label>Phone Number</label>
-                <input type="tel" id="reg-phone" placeholder="10-digit mobile number" required>
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="reg-pass" placeholder="Create a password" required>
-            </div>
-            <button onclick="register()">Sign Up</button>
-            <div class="toggle-text" onclick="toggleForm('login')">Already Created Account? Login here</div>
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="login-pass" placeholder="Enter password" required>
         </div>
-
+        <button type="button" onclick="login()" style="touch-action: manipulation;">Login</button>
+        <div class="toggle-text" onclick="showRegister()">Don't have an account? Sign Up</div>
     </div>
 
-   <script>
-    // --- 1. Referral Tracking Logic ---
-    // Page load hote hi check karo ki kya link mein 'ref' code hai
+    <div id="register-form" class="form-box">
+        <h2>Create Account</h2>
+        <div class="input-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="Enter your name" required>
+        </div>
+        <div class="input-group">
+            <label>Phone Number</label>
+            <input type="tel" id="reg-phone" placeholder="10-digit mobile number" required>
+        </div>
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="reg-pass" placeholder="Create a password" required>
+        </div>
+        <button type="button" onclick="register()" style="touch-action: manipulation;">Sign Up</button>
+        <div class="toggle-text" onclick="showLogin()">Already Created Account? Login here</div>
+    </div>
+</div>
+
+<script>
+    // Referral Tracking
     const urlParams = new URLSearchParams(window.location.search);
     const refCodeFromURL = urlParams.get('ref');
-
     if (refCodeFromURL) {
-        // Referral code ko browser ki memory mein save kar lo
         localStorage.setItem('tempRef', refCodeFromURL);
-        console.log("Referral detected:", refCodeFromURL);
     }
 
-    // --- 2. Registration Function ---
+    // Toggle Functions (FIXED)
+    function showRegister() {
+        document.getElementById('login-form').classList.remove('active');
+        document.getElementById('register-form').classList.add('active');
+    }
+    function showLogin() {
+        document.getElementById('login-form').classList.add('active');
+        document.getElementById('register-form').classList.remove('active');
+    }
+
+    // Login Function (FIXED IDs)
+    async function login() {
+        const phone = document.getElementById('login-phone').value;
+        const password = document.getElementById('login-pass').value;
+
+        if(!phone || !password) return alert("Details bharo bhai!");
+
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, password })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('currentUser', data.userId);
+                window.location.href = '/game.html';
+            } else {
+                alert(data.message);
+            }
+        } catch (e) {
+            alert("Server connection failed!");
+        }
+    }
+
+    // Register Function (Same as before but fixed toggle)
     async function register() {
         const name = document.getElementById('reg-name').value;
         const phone = document.getElementById('reg-phone').value;
         const password = document.getElementById('reg-pass').value;
-        
-        // Browser ki memory se referral code uthao (agar hai toh)
         const savedRef = localStorage.getItem('tempRef');
 
-        if (!name || !phone || !password) {
-            return alert("Saari details bharo bhai!");
-        }
+        if (!name || !phone || !password) return alert("Saari details bharo!");
 
         try {
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    name: name, 
-                    phone: phone, 
-                    password: password, 
-                    refCode: savedRef // Yeh line referral connect karegi
-                })
+                body: JSON.stringify({ name, phone, password, refCode: savedRef })
             });
 
             const data = await res.json();
-
             if (data.success) {
-                alert("🎉 Account ban gaya! Ab login karein.");
-                // Registration ke baad referral memory saaf kar do
+                alert("🎉 Success! Login karein.");
                 localStorage.removeItem('tempRef');
-                showLogin(); // Login screen par le jao
+                showLogin();
             } else {
                 alert(data.message);
             }
         } catch (e) {
-            alert("Server error! Baad mein try karein.");
+            alert("Error connecting to server!");
         }
     }
-
-    // --- 3. Login Function (Same rahega) ---
-    async function login() {
-        const phone = document.getElementById('login-phone').value;
-        const password = document.getElementById('login-pass').value;
-
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            localStorage.setItem('currentUser', data.userId);
-            window.location.href = '/game.html';
-        } else {
-            alert(data.message);
-        }
-    }
-
-    // UI Toggle Functions
-    function showRegister() {
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('register-form').style.display = 'block';
-    }
-    function showLogin() {
-        document.getElementById('login-form').style.display = 'block';
-        document.getElementById('register-form').style.display = 'none';
-    }
-    </script>
+</script>
 </body>
 </html>
