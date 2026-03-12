@@ -239,11 +239,26 @@
         }
 
         async function deleteGiftCode(id) {
-            if(confirm("Delete Code?")) {
-                await fetch(`/api/admin/delete-gift/${id}`, { method: 'DELETE' });
-                loadGiftCodes();
-            }
+    if(!confirm("Pakka delete karna hai?")) return;
+    
+    try {
+        // Yahan backtick (`) use karein taaki ${id} kaam kare
+        const res = await fetch(`/api/admin/delete-gift/${id}`, { 
+            method: 'DELETE' 
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            alert("🗑️ Code deleted!");
+            loadGiftCodes(); // Table refresh karo
+        } else {
+            alert("Delete nahi ho paya!");
         }
+    } catch (e) {
+        console.error("Delete error:", e);
+        alert("Server connection failed!");
+    }
+}
 
         async function takeAction(txnId, action, userPhone) {
             await fetch('/api/admin/action', {

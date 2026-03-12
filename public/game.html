@@ -178,33 +178,7 @@
     <nav>
         <div class="logo">💣 Build x Mines</div>
         <div class="balance-badge" id="top-balance">₹0.00</div>
-<script>
-async function redeemGift() {
-    const codeInput = document.getElementById('gift-input'); // Fixed ID
-    const code = codeInput.value.trim();
-    const userId = localStorage.getItem('currentUser');
 
-    if(!code) return alert("Code toh daalo bhai!");
-
-    try {
-        const res = await fetch('/api/redeem-gift', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ code: code, userId: userId }) // Match with server
-        });
-        
-        const data = await res.json();
-        alert(data.message);
-        
-        if(data.success) {
-            fetchBalance(); // Balance update karo
-            codeInput.value = ''; // Input box khali karo
-        }
-    } catch (e) {
-        alert("Server se connection nahi ho paya!");
-    }
-}
-</script>
         <div class="nav-links">
             <a href="/wallet.html">Wallet</a>
             <a href="/history.html">History</a>
@@ -234,6 +208,42 @@ async function redeemGift() {
             <button onclick="redeemGift()" style="padding:10px; background:var(--gold); border:none; border-radius:5px; cursor:pointer; font-weight:bold; color: #000;">Claim</button>
         </div>
     </div> 
+    <script>
+    async function redeemGift() {
+    const codeInput = document.getElementById('gift-input');
+    const code = codeInput.value.trim();
+    const userId = localStorage.getItem('currentUser');
+
+    if(!code) return alert("Pehle code toh daalo bhai!");
+
+    console.log("Attempting to redeem:", code, "for user:", userId);
+
+    try {
+        // Render par path hamesha /api/ se start hona chahiye
+        const res = await fetch('/api/redeem-gift', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, userId: userId })
+        });
+        
+        // Agar server 404 ya 500 bhej raha hai
+        if (!res.ok) {
+            throw new Error(`Server status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        alert(data.message);
+        
+        if(data.success) {
+            fetchBalance(); // Balance turant update karein
+            codeInput.value = ''; 
+        }
+    } catch (e) {
+        console.error("Fetch Error:", e);
+        alert("Server connection failed! Ek baar refresh karke try karein.");
+    }
+}
+</script>
 
     <div class="card" style="margin-top:20px; border: 1px dashed #e6c27a; padding: 20px; text-align: center; background: #151924; border-radius: 15px;">
         <h3 style="color: #e6c27a; margin-top: 0; font-size: 16px;">🔗 Refer & Earn</h3>
