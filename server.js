@@ -51,6 +51,37 @@ app.get('/api/admin/gift-codes', async (req, res) => {
     res.json({ success: true, codes });
 });
 
+// Check if user is eligible for Welcome Bonus
+app.post('/api/check-bonus', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.body.userId });
+        if (user && !user.hasClaimedBonus) {
+            res.json({ isNewUser: true });
+        } else {
+            res.json({ isNewUser: false });
+        }
+    } catch (e) {
+        res.json({ isNewUser: false });
+    }
+});
+
+// Claim Bonus API
+app.post('/api/claim-bonus', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.body.userId });
+        if (user && !user.hasClaimedBonus) {
+            user.balance += 20; // ₹20 Bonus
+            user.hasClaimedBonus = true;
+            await user.save();
+            res.json({ success: true, message: "₹20 Bonus Mil Gaya!" });
+        } else {
+            res.json({ success: false, message: "Already Claimed!" });
+        }
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 // ==========================================
 // 4. GAME APIs (Fixed Bet & Claim)
 // ==========================================
@@ -90,25 +121,26 @@ app.post('/api/login', async (req, res) => {
     else res.json({ success: false, message: "Wrong details!" });
 });
 
-// Registration API
 app.post('/api/register', async (req, res) => {
     try {
         const { name, phone, password, referralCode } = req.body;
 
-        // Check if user already exists
+        // 1. Check if user already exists
         const existingUser = await User.findOne({ phone });
         if (existingUser) {
             return res.json({ success: false, message: "⚠️ Number pehle se registered hai!" });
         }
 
-        // Create New User
+        // 2. Create New User with Bonus Status
         const newUser = new User({
             name,
             phone,
             password,
-            balance: 0, // Naye user ka balance 0
+            balance: 0, 
             transactions: [],
-            referredBy: referralCode || ""
+            referredBy: referralCode || "",
+            // 🔥 YE LINE ZAROORI HAI: Iske bina Welcome Box nahi aayega
+            hasClaimedBonus: false 
         });
 
         await newUser.save();
@@ -118,7 +150,6 @@ app.post('/api/register', async (req, res) => {
         res.json({ success: false, message: "Server Error: Registration fail ho gayi!" });
     }
 });
-
 // CASH OUT API (Winning Amount Balance mein add karne ke liye)
 app.post('/api/cashout', async (req, res) => {
     try {
