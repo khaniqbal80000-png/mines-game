@@ -305,6 +305,49 @@
             if(data.success) document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
         }
 
+        // Page load hote hi check karo
+window.onload = function() {
+    fetchBalance();
+    updateLeaderboard();
+    checkBonus(); // Ye function call hona zaroori hai
+};
+
+async function checkBonus() {
+    try {
+        const res = await fetch('/api/check-bonus', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ userId: currentUser }) 
+        });
+        const data = await res.json();
+        
+        // Agar naya user hai, toh modal dikhao
+        if(data.isNewUser) {
+            document.getElementById('bonus-modal').style.display = 'flex';
+        }
+    } catch(e) { console.log("Bonus check failed"); }
+}
+
+async function claimBonus() {
+    const giftBox = document.getElementById('gift-box');
+    giftBox.innerHTML = "💎"; // Animation effect
+    
+    try {
+        const res = await fetch('/api/claim-bonus', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ userId: currentUser }) 
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            alert("🎉 Eidi Mubarak! ₹20 aapke wallet mein add ho gaye.");
+            fetchBalance(); // Balance refresh karo
+            document.getElementById('bonus-modal').style.display = 'none';
+        }
+    } catch(e) { alert("Bonus claim error!"); }
+}
+
         async function updateLeaderboard() {
             const res = await fetch('/api/leaderboard');
             const data = await res.json();
