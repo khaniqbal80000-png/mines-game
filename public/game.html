@@ -305,12 +305,13 @@
             if(data.success) document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
         }
 
-        // Page load hote hi check karo
-window.onload = function() {
-    fetchBalance();
-    updateLeaderboard();
-    checkBonus(); // Ye function call hona zaroori hai
-};
+        // --- YAHAN SE PASTE KAREIN ---
+
+// 1. Page load hote hi Bonus check karne ke liye logic
+window.addEventListener('load', () => {
+    // Purane functions ke saath ise bhi call karein
+    checkBonus(); 
+});
 
 async function checkBonus() {
     try {
@@ -321,16 +322,21 @@ async function checkBonus() {
         });
         const data = await res.json();
         
-        // Agar naya user hai, toh modal dikhao
+        // Agar server kahe ki naya user hai, toh box dikhao
         if(data.isNewUser) {
             document.getElementById('bonus-modal').style.display = 'flex';
         }
-    } catch(e) { console.log("Bonus check failed"); }
+    } catch(e) { 
+        console.log("Bonus check error:", e); 
+    }
 }
 
 async function claimBonus() {
     const giftBox = document.getElementById('gift-box');
-    giftBox.innerHTML = "💎"; // Animation effect
+    
+    // Animation ke liye box badal do
+    giftBox.innerHTML = "💎";
+    giftBox.style.animation = "none";
     
     try {
         const res = await fetch('/api/claim-bonus', { 
@@ -341,12 +347,19 @@ async function claimBonus() {
         const data = await res.json();
         
         if(data.success) {
-            alert("🎉 Eidi Mubarak! ₹20 aapke wallet mein add ho gaye.");
-            fetchBalance(); // Balance refresh karo
-            document.getElementById('bonus-modal').style.display = 'none';
+            alert("🎉 Eidi Mubarak! ₹20 Bonus mil gaya.");
+            fetchBalance(); // Balance turant update karein
+            
+            // 1 second baad box band kar do
+            setTimeout(() => {
+                document.getElementById('bonus-modal').style.display = 'none';
+            }, 1000);
         }
-    } catch(e) { alert("Bonus claim error!"); }
+    } catch(e) { 
+        alert("Bonus claim nahi ho paya, baad mein try karein!"); 
+    }
 }
+// --- YAHAN TAK ---
 
         async function updateLeaderboard() {
             const res = await fetch('/api/leaderboard');
