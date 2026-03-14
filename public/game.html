@@ -167,14 +167,25 @@
         </div>
     </div>
 
-    <div id="bonus-modal" style="display:none; position:fixed; z-index:20000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content: center; align-items: center;">
-    <div style="background:#1a1a1a; padding:30px; border:2px solid #00e701; width:85%; max-width:320px; border-radius:20px; text-align:center; box-shadow: 0 0 20px rgba(0, 231, 1, 0.5);">
-        <h2 style="color:#00e701; margin:0; letter-spacing: 1px;">🎁 WELCOME GIFT!</h2>
+    <div id="bonus-modal" style="display:none !important; position:fixed; z-index:99999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content: center; align-items: center;">
+    <div style="background:#1a1a1a; padding:35px; border:2px solid #00e701; width:85%; max-width:320px; border-radius:25px; text-align:center; box-shadow: 0 0 30px rgba(0, 231, 1, 0.5);">
+        <h2 style="color:#00e701; margin:0;">🎁 WELCOME GIFT!</h2>
         <div id="gift-box" onclick="claimBonus()" style="font-size:80px; cursor:pointer; margin:20px 0; animation: bounce 1s infinite; display: inline-block;">📦</div>
-        <p style="color:white; font-weight: 600;">Tap the box to claim your ₹20 Eidi!</p>
+        <p style="color:white;">Tap to claim ₹20 Eidi!</p>
+        <button onclick="claimBonus()" style="width:100%; background:#00e701; color:black; border:none; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer;">CLAIM NOW</button>
     </div>
 </div>
 
+<style>
+/* Heartbeat animation for the box */
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    14% { transform: scale(1.1); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.1); }
+    70% { transform: scale(1); }
+}
+</style>
 <style>
 /* Box ko uchaalne ke liye animation */
 @keyframes bounce {
@@ -321,34 +332,27 @@ window.addEventListener('load', () => {
     checkBonus(); 
 });
 
+// 1. Check Bonus Logic (With Anti-Cache)
 async function checkBonus() {
     try {
-        console.log("Checking bonus for:", currentUser); // Debugging ke liye
-        const res = await fetch('/api/check-bonus', { 
+        const res = await fetch(`/api/check-bonus?t=${Date.now()}`, { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({ userId: currentUser }) 
         });
         const data = await res.json();
         
-        console.log("Server response for bonus:", data); // Laptop par F12 dabake check karein
-
+        const modal = document.getElementById('bonus-modal');
         if(data.isNewUser) {
-            // Modal ko 'flex' karein taaki center mein dikhe
-            document.getElementById('bonus-modal').style.display = 'flex';
+            // Ise hamesha flex aur center rakhega
+            modal.style.setProperty('display', 'flex', 'important');
+        } else {
+            modal.style.setProperty('display', 'none', 'important');
         }
-    } catch(e) { 
-        console.log("Bonus check error:", e); 
-    }
+    } catch(e) { console.log("Bonus check error"); }
 }
 
 async function claimBonus() {
-    const giftBox = document.getElementById('gift-box');
-    
-    // Animation ke liye box badal do
-    giftBox.innerHTML = "💎";
-    giftBox.style.animation = "none";
-    
     try {
         const res = await fetch('/api/claim-bonus', { 
             method: 'POST', 
@@ -358,30 +362,54 @@ async function claimBonus() {
         const data = await res.json();
         
         if(data.success) {
-            alert("🎉 Eidi Mubarak! ₹20 Bonus mil gaya.");
-            fetchBalance(); // Balance turant update karein
-            
-            // 1 second baad box band kar do
-            setTimeout(() => {
-                document.getElementById('bonus-modal').style.display = 'none';
-            }, 1000);
+            alert("🎉 Bonus Claimed Successfully!");
+            // Claim hote hi modal ko turant gayab karo
+            document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
+            fetchBalance(); // Balance update
+        } else {
+            // Agar already claimed hai toh bhi hata do
+            document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
         }
     } catch(e) { 
-        alert("Bonus claim nahi ho paya, baad mein try karein!"); 
+        alert("Connection error!"); 
     }
 }
 // --- YAHAN TAK ---
 
         async function updateLeaderboard() {
-            const res = await fetch('/api/leaderboard');
-            const data = await res.json();
-            const tbody = document.getElementById('leaderboard-body');
-            tbody.innerHTML = data.map((u, i) => `
-                <tr style="border-bottom: 1px solid #222;">
-                    <td style="padding: 8px;">${i+1}. ${u.phone}</td>
-                    <td style="padding: 8px; text-align: right; color: #00ff00;">₹${u.totalProfit.toFixed(2)}</td>
-                </tr>`).join('');
-        }
+    try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        const tbody = document.getElementById('leaderboard-body');
+        
+        tbody.innerHTML = data.map((u, i) => {
+            let rankIcon = "";
+            let rowStyle = 'border-bottom: 1px solid #222;';
+            
+            // Gold, Silver, Bronze logic
+            if (i === 0) {
+                rankIcon = "🥇 ";
+                rowStyle += "background: rgba(255, 215, 0, 0.05); color: #ffd700; font-weight: bold;";
+            } else if (i === 1) {
+                rankIcon = "🥈 ";
+                rowStyle += "color: #c0c0c0;";
+            } else if (i === 2) {
+                rankIcon = "🥉 ";
+                rowStyle += "color: #cd7f32;";
+            } else {
+                rankIcon = `${i + 1}. `;
+            }
+
+            return `
+                <tr style="${rowStyle}">
+                    <td style="padding: 12px 8px;">${rankIcon}${u.phone}</td>
+                    <td style="padding: 12px 8px; text-align: right; color: #00ff00;">₹${u.totalProfit.toFixed(2)}</td>
+                </tr>`;
+        }).join('');
+    } catch (e) {
+        console.log("Leaderboard update error");
+    }
+}
 
         function createBoard() {
             board.innerHTML = '';
