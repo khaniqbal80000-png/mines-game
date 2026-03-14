@@ -90,6 +90,35 @@ app.post('/api/login', async (req, res) => {
     else res.json({ success: false, message: "Wrong details!" });
 });
 
+// Registration API
+app.post('/api/register', async (req, res) => {
+    try {
+        const { name, phone, password, referralCode } = req.body;
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ phone });
+        if (existingUser) {
+            return res.json({ success: false, message: "⚠️ Number pehle se registered hai!" });
+        }
+
+        // Create New User
+        const newUser = new User({
+            name,
+            phone,
+            password,
+            balance: 0, // Naye user ka balance 0
+            transactions: [],
+            referredBy: referralCode || ""
+        });
+
+        await newUser.save();
+        res.json({ success: true, message: "🎉 Registration Successful!", userId: newUser.phone });
+    } catch (e) {
+        console.error("Register Error:", e);
+        res.json({ success: false, message: "Server Error: Registration fail ho gayi!" });
+    }
+});
+
 // CASH OUT API (Winning Amount Balance mein add karne ke liye)
 app.post('/api/cashout', async (req, res) => {
     try {
