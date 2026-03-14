@@ -181,4 +181,59 @@ app.post('/api/user', async (req, res) => {
     else res.json({ success: false });
 });
 
+// 1. DEPOSIT API (User request bhejega)
+app.post('/api/deposit', async (req, res) => {
+    try {
+        const { amount, utr, userId } = req.body;
+        const user = await User.findOne({ phone: userId });
+        if (!user) return res.json({ success: false, message: "User nahi mila!" });
+
+        // Transaction history mein 'Pending' deposit add karein
+        user.transactions.unshift({
+            id: `DEP-${Date.now()}`,
+            type: 'Deposit',
+            amount: Number(amount),
+            utr: utr,
+            date: new Date().toLocaleString(),
+            status: 'Pending' // Admin ise dashboard se approve karega
+        });
+
+        await user.save();
+        res.json({ success: true, message: "Request bhej di gayi hai! Admin 30 min mein check karke paisa add kar dega." });
+    } catch (e) {
+        res.json({ success: false, message: "Deposit fail ho gaya!" });
+    }
+});
+
+// 2. WITHDRAW API
+app.post('/api/withdraw', async (req, res) => {
+    try {
+        const { amount, upiId, userId } = req.body;
+        const user = await User.findOne({ phone: userId });
+
+        if (!user || user.balance < amount) {
+            return res.json({ success: false, message: "Balance kam hai bhai!" });
+        }
+
+        if (amount < 200) return res.json({ success: false, message: "Kam se kam ₹200 withdraw karein." });
+
+        // Paisa turant deduct karo (taaki banda baar-baar request na bheje)
+        user.balance -= Number(amount);
+        
+        user.transactions.unshift({
+            id: `WITH-${Date.now()}`,
+            type: 'Withdraw',
+            amount: Number(amount),
+            upiId: upiId,
+            date: new Date().toLocaleString(),
+            status: 'Pending'
+        });
+
+        await user.save();
+        res.json({ success: true, message: "Withdrawal request lag gayi hai. 1-2 ghante mein paise mil jayenge!", newBalance: user.balance });
+    } catch (e) {
+        res.json({ success: false, message: "Withdraw fail ho gaya!" });
+    }
+});
+
 app.listen(PORT, () => console.log(`🚀 Server Live on Port ${PORT}`));
