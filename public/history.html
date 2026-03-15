@@ -80,42 +80,58 @@
     </div>
 
 <script>
-async function loadHistory() {
-    const currentUser = localStorage.getItem('currentUser'); // Login ID nikalo
-    if (!currentUser) return window.location.href = '/index.html';
+    const currentUser = localStorage.getItem('currentUser');
 
-    const res = await fetch('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser }) // User ID server ko bhejo
-    });
-    const data = await res.json();
-    
-    const listContainer = document.getElementById('transaction-list');
-    listContainer.innerHTML = ''; 
+    async function loadHistory() {
+        if (!currentUser) {
+            window.location.href = '/index.html';
+            return;
+        }
 
-    if (!data.transactions || data.transactions.length === 0) {
-        listContainer.innerHTML = '<div class="empty-state">No transactions yet.</div>';
-        return;
+        try {
+            const res = await fetch('/api/user/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser })
+            });
+            
+            const data = await res.json();
+            const listContainer = document.getElementById('transaction-list');
+
+            if (data.success && data.history.length > 0) {
+                listContainer.innerHTML = data.history.map(tx => {
+                    // Type ke hisab se class aur icon set karna
+                    const typeClass = tx.type.toLowerCase();
+                    const statusClass = tx.status.toLowerCase();
+                    
+                    return `
+                        <div class="history-item ${typeClass}">
+                            <div class="details">
+                                <h4>${tx.type}</h4>
+                                <p>${tx.date}</p>
+                                ${tx.utr ? `<p style="font-size:10px;">UTR: ${tx.utr}</p>` : ''}
+                                ${tx.upiId ? `<p style="font-size:10px;">UPI: ${tx.upiId}</p>` : ''}
+                            </div>
+                            <div class="amount-box">
+                                <h4 style="color: ${tx.type === 'Win' || tx.type === 'Deposit' ? '#4caf50' : '#ff4444'}">
+                                    ${tx.type === 'Win' || tx.type === 'Deposit' ? '+' : '-'}₹${tx.amount}
+                                </h4>
+                                <span class="status ${statusClass}">${tx.status}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listContainer.innerHTML = '<div class="empty-state">Koi transaction nahi mila!</div>';
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('transaction-list').innerHTML = '<div class="empty-state">Server connection failed!</div>';
+        }
     }
 
-    data.transactions.forEach(txn => {
-        // ... (Baki ka UI code jo pehle tha wahi rahega) ...
-        const itemHTML = `
-            <div class="history-item ${txn.type === 'Deposit' ? 'deposit' : 'withdraw'}">
-                <div class="details">
-                    <h4>${txn.type}</h4>
-                    <p>${txn.date} | ID: ${txn.id}</p>
-                </div>
-                <div class="amount-box">
-                    <h4>₹${txn.amount}</h4>
-                    <span class="status ${txn.status.toLowerCase()}">${txn.status}</span>
-                </div>
-            </div>`;
-        listContainer.innerHTML += itemHTML;
-    });
-}
-loadHistory();
+    // Page load hote hi history load karo
+    window.onload = loadHistory;
 </script>
 </body>
 </html>

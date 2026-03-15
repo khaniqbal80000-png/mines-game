@@ -236,4 +236,106 @@ app.post('/api/withdraw', async (req, res) => {
     }
 });
 
+// 1. User ki History dikhane ke liye
+app.post('/api/user/history', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.body.userId });
+        if (user) {
+            res.json({ success: true, history: user.transactions });
+        } else {
+            res.json({ success: false, message: "User nahi mila!" });
+        }
+    } catch (e) { res.json({ success: false }); }
+});
+
+// --- 1. ADMIN DASHBOARD STATS (Total Balance & Pending Tasks) ---
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const users = await User.find({});
+        let totalBalance = 0;
+        let pendingCount = 0;
+
+        users.forEach(user => {
+            totalBalance += (user.balance || 0);
+            user.transactions.forEach(tx => {
+                if (tx.status === 'Pending') pendingCount++;
+            });
+        });
+
+        res.json({ success: true, totalBalance, pendingCount });
+    } catch (e) { res.json({ success: false }); }
+});
+
+// --- 2. APPROVE/REJECT LOGIC (Fixing Alert Issue) ---
+app.post('/api/admin/approve-request', async (req, res) => {
+    try {
+        const { userPhone, txId, action } = req.body;
+        const user = await User.findOne({ phone: userPhone });
+        if (!user) return res.json({ success: false, message: "User nahi mila!" });
+
+        const tx = user.transactions.find(t => t.id === txId);
+        if (!tx) return res.json({ success: false, message: "Transaction gayab hai!" });
+        if (tx.status !== 'Pending') return res.json({ success: false, message: "Ye pehle hi process ho chuka hai!" });
+
+        if (action === 'Approve') {
+            tx.status = 'Success';
+            if (tx.type === 'Deposit') {
+                // 10% Extra Bonus Logic (₹100 par ₹110)
+                const bonus = tx.amount * 0.10; 
+                user.balance += (Number(tx.amount) + bonus);
+            }
+            // Note: Withdraw ke waqt balance pehle hi deduct ho jata hai request par
+        } else {
+            tx.status = 'Rejected';
+            if (tx.type === 'Withdraw') {
+                user.balance += Number(tx.amount); // Reject hone par paisa wapas
+            }
+        }
+
+        user.markModified('transactions');
+        await user.save();
+        res.json({ success: true, message: `Request ${action} ho gayi!` });
+    } catch (e) { 
+        console.error(e);
+        res.json({ success: false, message: "Server Error!" }); 
+    }
+});
+
+app.get('/api/admin/pending-requests', async (req, res) => {
+    try {
+        // Un users ko dhoondo jinke transactions mein status 'Pending' hai
+        const users = await User.find({ "transactions.status": "Pending" });
+        let pendingData = [];
+
+        users.forEach(user => {
+            if (user.transactions && user.transactions.length > 0) {
+                user.transactions.forEach(tx => {
+                    if (tx.status === 'Pending') {
+                        // Saari zaroori details ek jagah jama karo
+                        pendingData.push({
+                            id: tx.id,
+                            type: tx.type,
+                            amount: tx.amount,
+                            utr: tx.utr || '',
+                            upiId: tx.upiId || '',
+                            date: tx.date,
+                            status: tx.status,
+                            userPhone: user.phone,
+                            userName: user.name
+                        });
+                    }
+                });
+            }
+        });
+
+        // Latest request pehle dikhane ke liye sort (Optional)
+        pendingData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json({ success: true, requests: pendingData });
+    } catch (e) { 
+        console.error("Admin Request Error:", e);
+        res.json({ success: false, requests: [] }); 
+    }
+});
+
 app.listen(PORT, () => console.log(`🚀 Server Live on Port ${PORT}`));

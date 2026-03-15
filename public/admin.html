@@ -106,11 +106,11 @@
         
         <div class="stats-bar">
             <div class="stat-item">
-                <h2 id="total-pending">0</h2>
+                <h2 id="pending-tasks">0</h2>
                 <p>Pending Tasks</p>
             </div>
             <div class="stat-item">
-                <h2 id="total-revenue">₹0</h2>
+                <h2 id="total-bal">₹0</h2>
                 <p>Total Balance (All Users)</p>
             </div>
             <button class="btn" style="background: #2a2e38; color: white; font-size: 12px;" onclick="refreshAdminData()">🔄 Refresh All</button>
@@ -167,6 +167,12 @@
         <div class="card">
             <h3 style="color: var(--gold);">⏳ Pending Transactions</h3>
             <div id="txn-list"></div>
+            <div class="admin-section" style="padding: 20px; background: #151924; border-radius: 15px; margin-top: 20px; border: 1px solid #2a2e38;">
+    <h2 style="color: #e6c27a; text-align: center;">📥 Pending Requests</h2>
+    <div id="pending-list">
+        <p style="text-align: center; color: #8c96a5;">Loading requests...</p>
+    </div>
+</div>
         </div>
     </div>
 
@@ -300,6 +306,71 @@ function updateRefSettings() {
 
 // RefreshAdminData() function mein isse bhi add kar dena
 // async function refreshAdminData() { ... loadReferralStats(); ... }
+
+    // 1. Requests Load Karne ka Function
+    async function loadRequests() {
+        try {
+            const res = await fetch('/api/admin/pending-requests');
+            const data = await res.json();
+            const container = document.getElementById('pending-list');
+
+            if (data.success && data.requests.length > 0) {
+                container.innerHTML = data.requests.map(req => `
+                    <div style="background: #0b0e14; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333;">
+                        <p style="margin: 0; color: #00e701;"><b>${req.type} Request</b></p>
+                        <p style="margin: 5px 0;">User: ${req.userPhone} (${req.userName || 'No Name'})</p>
+                        <p style="margin: 5px 0;">Amount: <b>₹${req.amount}</b></p>
+                        <p style="font-size: 11px; color: #8c96a5;">UTR/UPI: ${req.utr || req.upiId || 'N/A'}</p>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button onclick="updateStatus('${req.userPhone}', '${req.id}', 'Approve')" style="background: #00e701; color: black; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Approve</button>
+                            <button onclick="updateStatus('${req.userPhone}', '${req.id}', 'Reject')" style="background: #ff4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Reject</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: #888;">Koi pending request nahi hai! 😎</p>';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadStats() {
+    try {
+        const res = await fetch('/api/admin/stats');
+        const data = await res.json();
+        if (data.success) {
+            // Maan lijiye aapki IDs 'total-bal' aur 'pending-tasks' hain
+            document.getElementById('total-bal').innerText = `₹${data.totalBalance.toFixed(2)}`;
+            document.getElementById('pending-tasks').innerText = data.pendingCount;
+        }
+    } catch (e) { console.log("Stats error"); }
+}
+
+// updateStatus function ko check karein ki ye fetch sahi bhej raha hai
+async function updateStatus(phone, txId, action) {
+    if(!confirm(`Bhai, pakka ${action} karna hai?`)) return;
+
+    try {
+        const res = await fetch('/api/admin/approve-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userPhone: phone, txId: txId, action: action })
+        });
+        const data = await res.json();
+        alert(data.message);
+        
+        // Refresh Everything
+        loadRequests(); 
+        loadStats();
+    } catch (e) { alert("Action fail ho gaya!"); }
+}
+
+// Sab kuch load karo
+window.onload = () => {
+    loadRequests();
+    loadStats();
+};
     </script>
 </body>
 </html>
