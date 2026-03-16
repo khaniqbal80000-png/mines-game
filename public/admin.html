@@ -145,7 +145,7 @@
                 <th style="padding: 10px; text-align: right;">Total Earned</th>
             </tr>
         </thead>
-        <tbody id="referral-list-body">
+        <tbody id="promoter-list">
             </tbody>
     </table>
 </div>
@@ -371,6 +371,37 @@ window.onload = () => {
     loadRequests();
     loadStats();
 };
+
+        async function loadPromoterStats() {
+    try {
+        const res = await fetch('/api/admin/referral-stats');
+        const data = await res.json();
+        
+        // Maan lijiye aapke table body ki ID 'promoter-list' hai
+        const container = document.getElementById('promoter-list'); 
+        
+        if (data.success && data.promoters.length > 0) {
+            container.innerHTML = data.promoters.map((p, index) => `
+                <tr style="border-bottom: 1px solid #222;">
+                    <td style="padding: 10px;">${index + 1}</td>
+                    <td style="padding: 10px;">${p.phone}</td>
+                    <td style="padding: 10px; text-align: center;">${p.referralCount}</td>
+                    <td style="padding: 10px; text-align: right; color: #00e701;">₹${p.totalEarned.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        } else {
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Abhi tak koi promoter nahi hai!</td></tr>';
+        }
+    } catch (e) { console.log("Referral Stats error"); }
+}
+
+// Ise bhi window.onload mein add kar dein
+window.onload = () => {
+    loadRequests();
+    loadStats();
+    loadPromoterStats(); // 👈 Ye naya call
+};
+
     </script>
 </body>
 </html>

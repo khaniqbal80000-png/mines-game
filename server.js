@@ -21,10 +21,11 @@ const User = mongoose.model('User', new mongoose.Schema({
     phone: String, 
     password: String, 
     balance: { type: Number, default: 0 },
-    hasClaimedBonus: { type: Boolean, default: false }, // 🔥 Strictly Defined
-    transactions: Array, 
+    hasClaimedBonus: { type: Boolean, default: false },
+    referralCode: { type: String, unique: true }, // 👈 Naya unique code field
     referredBy: String, 
-    referralCount: { type: Number, default: 0 }
+    referralCount: { type: Number, default: 0 },
+    transactions: Array
 }));
 
 const GiftCode = mongoose.model('GiftCode', new mongoose.Schema({
@@ -90,31 +91,64 @@ app.get('/api/admin/gift-codes', async (req, res) => {
     res.json({ success: true, codes });
 });
 
+app.get('/api/admin/referral-stats', async (req, res) => {
+    try {
+        const users = await User.find({});
+        
+        let promoters = users.map(user => {
+            // Sirf 'Referral Bonus' wali transactions ka sum nikaalein
+            const earned = user.transactions
+                .filter(tx => tx.type === 'Referral Bonus' && tx.status === 'Success')
+                .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+            return {
+                phone: user.phone,
+                referralCount: user.referralCount || 0,
+                totalEarned: earned
+            };
+        });
+
+        // Jin logo ne kam se kam 1 refer kiya hai sirf unhe dikhao aur rank karo
+        promoters = promoters.filter(p => p.referralCount > 0)
+                             .sort((a, b) => b.totalEarned - a.totalEarned);
+
+        res.json({ success: true, promoters });
+    } catch (e) {
+        res.json({ success: false, message: "Error fetching referral stats" });
+    }
+});
+
 // ==========================================
 // 4. GAME & AUTH APIs
 // ==========================================
 
+// Random Code Generator Function
+function generateRefCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 app.post('/api/register', async (req, res) => {
     try {
         const { name, phone, password, referralCode } = req.body;
+
         const existingUser = await User.findOne({ phone });
-        if (existingUser) {
-            return res.json({ success: false, message: "⚠️ Number pehle se registered hai!" });
-        }
+        if (existingUser) return res.json({ success: false, message: "⚠️ Pehle se registered hai!" });
+
+        // Naya Unique Referral Code banao
+        const myNewRefCode = generateRefCode();
 
         const newUser = new User({
             name, phone, password,
             balance: 0, 
             transactions: [],
-            referredBy: referralCode || "",
-            hasClaimedBonus: false // Naye user ke liye hamesha false
+            referredBy: referralCode || "", // Jo code user ne dala
+            referralCode: myNewRefCode,      // Is user ka apna naya code
+            hasClaimedBonus: false 
         });
 
         await newUser.save();
-        res.json({ success: true, message: "🎉 Registration Successful!", userId: newUser.phone });
-    } catch (e) {
-        res.json({ success: false, message: "Server Error!" });
-    }
+        res.json({ success: true, message: "Registration Successful!", userId: newUser.phone });
+    } catch (e) { res.json({ success: false, message: "Error!" }); }
 });
 
 app.post('/api/login', async (req, res) => {
@@ -176,9 +210,21 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.post('/api/user', async (req, res) => {
-    const user = await User.findOne({ phone: req.body.userId });
-    if(user) res.json({ success: true, balance: user.balance || 0 });
-    else res.json({ success: false });
+    try {
+        const user = await User.findOne({ phone: req.body.userId });
+        if (user) {
+            res.json({ 
+                success: true, 
+                balance: user.balance || 0,
+                // Agar code nahi hai toh phone number hi bhej do backup ke liye
+                referralCode: user.referralCode || user.phone 
+            });
+        } else {
+            res.json({ success: false, message: "User not found" });
+        }
+    } catch (e) {
+        res.json({ success: false, message: "Server Error" });
+    }
 });
 
 // 1. DEPOSIT API (User request bhejega)
@@ -274,30 +320,50 @@ app.post('/api/admin/approve-request', async (req, res) => {
         if (!user) return res.json({ success: false, message: "User nahi mila!" });
 
         const tx = user.transactions.find(t => t.id === txId);
-        if (!tx) return res.json({ success: false, message: "Transaction gayab hai!" });
-        if (tx.status !== 'Pending') return res.json({ success: false, message: "Ye pehle hi process ho chuka hai!" });
+        if (!tx || tx.status !== 'Pending') return res.json({ success: false, message: "Invalid Request!" });
 
         if (action === 'Approve') {
             tx.status = 'Success';
+
             if (tx.type === 'Deposit') {
-                // 10% Extra Bonus Logic (₹100 par ₹110)
-                const bonus = tx.amount * 0.10; 
+                // 1. User ko uska deposit + 10% bonus do
+                const bonus = tx.amount * 0.10;
                 user.balance += (Number(tx.amount) + bonus);
+
+                // 2. REFERRAL REWARD LOGIC (Sirf Pehle Deposit Par)
+                // Check karo ki kya ye user ka pehla successful deposit hai
+                const successDeposits = user.transactions.filter(t => t.type === 'Deposit' && t.status === 'Success');
+                
+                // Approve API ke andar ye line change karein:
+                if (successDeposits.length === 1 && user.referredBy) {
+             const referrer = await User.findOne({ referralCode: user.referredBy }); // 👈 Code se dhoondo
+                 // ... baaki ka logic wahi rahega
+                    if (referrer) {
+                        referrer.balance += 20; // Referral Reward
+                        referrer.transactions.unshift({
+                            id: `REF-${Date.now()}`,
+                            type: 'Referral Bonus',
+                            amount: 20,
+                            date: new Date().toLocaleString('en-IN'),
+                            status: 'Success',
+                            note: `Bonus for ${userPhone}'s 1st deposit`
+                        });
+                        referrer.markModified('transactions');
+                        await referrer.save();
+                        console.log(`Referral Reward ₹20 sent to ${referrer.phone}`);
+                    }
+                }
             }
-            // Note: Withdraw ke waqt balance pehle hi deduct ho jata hai request par
         } else {
             tx.status = 'Rejected';
-            if (tx.type === 'Withdraw') {
-                user.balance += Number(tx.amount); // Reject hone par paisa wapas
-            }
+            if (tx.type === 'Withdraw') user.balance += Number(tx.amount);
         }
 
         user.markModified('transactions');
         await user.save();
-        res.json({ success: true, message: `Request ${action} ho gayi!` });
-    } catch (e) { 
-        console.error(e);
-        res.json({ success: false, message: "Server Error!" }); 
+        res.json({ success: true, message: `Request Approved & Referral Reward Checked!` });
+    } catch (e) {
+        res.json({ success: false, message: "Server Error!" });
     }
 });
 

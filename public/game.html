@@ -290,247 +290,241 @@
             <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
 
 <script>
-    // User ka phone number hi unka referral code hai
-    const userPhone = localStorage.getItem('currentUser');
-    const myLink = "https://build-x-mines.onrender.com?ref=" + userPhone;
-    document.getElementById('my-ref-link').innerText = myLink;
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) window.location.href = '/index.html';
 
-    function copyMyLink() {
-        navigator.clipboard.writeText(myLink);
-        alert("Referral Link Copy ho gaya! WhatsApp par share karein.");
-    }
-</script>
-    <script>
-        const currentUser = localStorage.getItem('currentUser');
-        if (!currentUser) window.location.href = '/index.html';
+    const board = document.getElementById('game-board');
+    let betAmount = 0, mines = new Set(), isPlaying = false, currentMultiplier = 1.00;
 
-        const board = document.getElementById('game-board');
-        let betAmount = 0, mines = new Set(), isPlaying = false, currentMultiplier = 1.00;
+    // Sounds
+    const winSound = new Audio('gem.mp3');
+    const loseSound = new Audio('bomb.mp3');
 
-        // Sounds
-        const winSound = new Audio('gem.mp3');
-        const loseSound = new Audio('bomb.mp3');
+    // --- 1. INITIAL LOAD ---
+    window.addEventListener('load', async () => {
+        await fetchBalance();
+        await updateReferralLink();
+        updateLeaderboard();
+        checkBonus();
+        showEvent("Tournament: 10 Mines ke sath ₹500 Bonus jeetein!");
+    });
 
-        window.addEventListener('load', async () => {
-            fetchBalance();
-            updateLeaderboard();
-            showEvent("Tournament: 10 Mines ke sath ₹500 Bonus jeetein!");
-            checkBonus();
-        });
-
-        async function fetchBalance() {
-            const res = await fetch('/api/user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser }) });
-            const data = await res.json();
-            if(data.success) document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
-        }
-
-        // --- YAHAN SE PASTE KAREIN ---
-
-// 1. Page load hote hi Bonus check karne ke liye logic
-window.addEventListener('load', () => {
-    // Purane functions ke saath ise bhi call karein
-    checkBonus(); 
-});
-
-// 1. Check Bonus Logic (With Anti-Cache)
-async function checkBonus() {
-    try {
-        const res = await fetch(`/api/check-bonus?t=${Date.now()}`, { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ userId: currentUser }) 
-        });
-        const data = await res.json();
-        
-        const modal = document.getElementById('bonus-modal');
-        if(data.isNewUser) {
-            // Ise hamesha flex aur center rakhega
-            modal.style.setProperty('display', 'flex', 'important');
-        } else {
-            modal.style.setProperty('display', 'none', 'important');
-        }
-    } catch(e) { console.log("Bonus check error"); }
-}
-
-async function claimBonus() {
-    try {
-        const res = await fetch('/api/claim-bonus', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ userId: currentUser }) 
-        });
-        const data = await res.json();
-        
-        if(data.success) {
-            alert("🎉 Bonus Claimed Successfully!");
-            // Claim hote hi modal ko turant gayab karo
-            document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
-            fetchBalance(); // Balance update
-        } else {
-            // Agar already claimed hai toh bhi hata do
-            document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
-        }
-    } catch(e) { 
-        alert("Connection error!"); 
-    }
-}
-// --- YAHAN TAK ---
-
-        async function updateLeaderboard() {
-    try {
-        const res = await fetch('/api/leaderboard');
-        const data = await res.json();
-        const tbody = document.getElementById('leaderboard-body');
-        
-        tbody.innerHTML = data.map((u, i) => {
-            let rankIcon = "";
-            let rowStyle = 'border-bottom: 1px solid #222;';
-            
-            // Gold, Silver, Bronze logic
-            if (i === 0) {
-                rankIcon = "🥇 ";
-                rowStyle += "background: rgba(255, 215, 0, 0.05); color: #ffd700; font-weight: bold;";
-            } else if (i === 1) {
-                rankIcon = "🥈 ";
-                rowStyle += "color: #c0c0c0;";
-            } else if (i === 2) {
-                rankIcon = "🥉 ";
-                rowStyle += "color: #cd7f32;";
-            } else {
-                rankIcon = `${i + 1}. `;
-            }
-
-            return `
-                <tr style="${rowStyle}">
-                    <td style="padding: 12px 8px;">${rankIcon}${u.phone}</td>
-                    <td style="padding: 12px 8px; text-align: right; color: #00ff00;">₹${u.totalProfit.toFixed(2)}</td>
-                </tr>`;
-        }).join('');
-    } catch (e) {
-        console.log("Leaderboard update error");
-    }
-}
-
-        function createBoard() {
-            board.innerHTML = '';
-            for (let i = 0; i < 25; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('cell');
-                cell.dataset.index = i;
-                cell.onclick = () => revealCell(cell, i);
-                board.appendChild(cell);
-            }
-        }
-
-        async function startGame() {
-            // Sound unlock for browser
-            winSound.play().then(() => { winSound.pause(); winSound.currentTime = 0; });
-            
-            betAmount = parseFloat(document.getElementById('bet').value);
-            const mCount = parseInt(document.getElementById('mine-count').value);
-            const res = await fetch('/api/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ betAmount, userId: currentUser }) });
-            const data = await res.json();
-            if(!data.success) return alert(data.message);
-            
-            document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-            isPlaying = true; currentMultiplier = 1.00;
-            document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('cashout-btn').style.display = 'block';
-            mines.clear();
-            while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
-            createBoard(); updateStatusText();
-        }
-
-        function revealCell(cell, index) {
-            if (!isPlaying || cell.classList.contains('revealed') || cell.classList.contains('mine')) return;
-
-            if (mines.has(index)) {
-                loseSound.currentTime = 0; loseSound.play();
-                if(navigator.vibrate) navigator.vibrate(200);
-                cell.classList.add('mine'); cell.innerHTML = '💣';
-                endGame(false);
-            } else {
-                winSound.currentTime = 0; winSound.play();
-                if(navigator.vibrate) navigator.vibrate(50);
-                cell.classList.add('revealed'); cell.innerHTML = '💎';
-                
-                const rect = cell.getBoundingClientRect();
-                createParticles(rect.left + rect.width/2, rect.top + rect.height/2);
-
-                const revealedCount = document.querySelectorAll('.cell.revealed').length;
-                let rawMultiplier = (25 - (revealedCount - 1)) / (25 - mines.size - (revealedCount - 1));
-                currentMultiplier = rawMultiplier * 0.97;
-                if(revealedCount === 1) {
-                    if(mines.size === 1) currentMultiplier = 1.015;
-                    else if(mines.size === 3) currentMultiplier = 1.12;
-                    else if(mines.size === 5) currentMultiplier = 1.25;
-                }
-                updateStatusText();
-            }
-        }
-
-        function createParticles(x, y) {
-            for (let i = 0; i < 10; i++) {
-                const p = document.createElement('div'); p.classList.add('particle');
-                p.style.setProperty('--x', (Math.random() - 0.5) * 100 + 'px');
-                p.style.setProperty('--y', (Math.random() - 0.5) * 100 + 'px');
-                p.style.left = x + 'px'; p.style.top = y + 'px';
-                document.body.appendChild(p); setTimeout(() => p.remove(), 600);
-            }
-        }
-
-        async function cashOut() {
-            if(!isPlaying) return;
-            const winnings = betAmount * currentMultiplier;
-            const res = await fetch('/api/cashout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ winnings, userId: currentUser }) });
+    // --- 2. BALANCE & REFERRAL LOGIC ---
+    async function fetchBalance() {
+        try {
+            const res = await fetch('/api/user', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userId: currentUser }) 
+            });
             const data = await res.json();
             if(data.success) {
-                document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-                alert(`Jeet gaye! ₹${winnings.toFixed(2)}`);
-                endGame(true);
+                // Top balance update
+                document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
             }
-        }
+        } catch (e) { console.log("Balance fetch error"); }
+    }
 
-        function endGame(won) {
-            isPlaying = false;
-            document.getElementById('start-btn').style.display = 'block';
-            document.getElementById('cashout-btn').style.display = 'none';
-            document.querySelectorAll('.cell').forEach(cell => {
-                if (mines.has(parseInt(cell.dataset.index))) {
-                    cell.innerHTML = '💣'; cell.classList.add('mine');
-                }
+    async function updateReferralLink() {
+        try {
+            const res = await fetch('/api/user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser })
             });
-            if(!won) {
-                document.getElementById('profit').innerText = `-₹${betAmount.toFixed(2)}`;
-                document.getElementById('profit').style.color = 'red';
+            const data = await res.json();
+
+            if (data.success) {
+                // Phone ki jagah Random Code use karega (Back-end fix ke baad)
+                const refCode = data.referralCode || currentUser;
+                const myLink = `https://build-x-mines.onrender.com?ref=${refCode}`;
+                
+                const linkElem = document.getElementById('my-ref-link');
+                if(linkElem) linkElem.innerText = myLink;
+
+                window.generatedReferralLink = myLink; 
             }
-        }
+        } catch (e) { console.log("Referral link error"); }
+    }
 
-        function updateStatusText() {
-            document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
-            let curWin = betAmount * currentMultiplier;
-            document.getElementById('profit').innerText = `+₹${(curWin - betAmount).toFixed(2)}`;
-            document.getElementById('cashout-btn').innerText = `Cash Out (₹${curWin.toFixed(2)})`;
-        }
+    function copyMyLink() {
+        const linkToCopy = window.generatedReferralLink || `https://build-x-mines.onrender.com?ref=${currentUser}`;
+        navigator.clipboard.writeText(linkToCopy).then(() => {
+            alert("🚀 Referral Link Copy Ho Gaya!\n" + linkToCopy);
+        });
+    }
 
-        function showEvent(msg) { document.getElementById('event-text').innerText = msg; document.getElementById('event-modal').style.display = 'block'; }
-        function closeEvent() { document.getElementById('event-modal').style.display = 'none'; }
-        
-        async function checkBonus() {
-            const res = await fetch('/api/check-bonus', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser }) });
+    // --- 3. BONUS LOGIC ---
+    async function checkBonus() {
+        try {
+            const res = await fetch(`/api/check-bonus?t=${Date.now()}`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userId: currentUser }) 
+            });
             const data = await res.json();
-            if(data.isNewUser) document.getElementById('bonus-modal').style.display = 'block';
-        }
+            const modal = document.getElementById('bonus-modal');
+            if(data.isNewUser) {
+                modal.style.setProperty('display', 'flex', 'important');
+            } else {
+                modal.style.setProperty('display', 'none', 'important');
+            }
+        } catch(e) { console.log("Bonus check error"); }
+    }
 
-        async function claimBonus() {
+    async function claimBonus() {
+        try {
             document.getElementById('gift-box').innerHTML = "💎";
-            const res = await fetch('/api/claim-bonus', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser, bonusAmount: 20 }) });
+            const res = await fetch('/api/claim-bonus', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userId: currentUser }) 
+            });
             const data = await res.json();
-            if(data.success) { fetchBalance(); setTimeout(() => document.getElementById('bonus-modal').style.display = 'none', 1000); }
-        }
+            if(data.success) {
+                alert("🎉 ₹20 Bonus Mil Gaya!");
+                document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
+                fetchBalance();
+            }
+        } catch(e) { alert("Connection error!"); }
+    }
 
-        createBoard();
-        setInterval(updateLeaderboard, 30000);
-    </script>
+    // --- 4. GAME CORE LOGIC ---
+    function createBoard() {
+        board.innerHTML = '';
+        for (let i = 0; i < 25; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.index = i;
+            cell.onclick = () => revealCell(cell, i);
+            board.appendChild(cell);
+        }
+    }
+
+    async function startGame() {
+        winSound.play().then(() => { winSound.pause(); winSound.currentTime = 0; });
+        betAmount = parseFloat(document.getElementById('bet').value);
+        const mCount = parseInt(document.getElementById('mine-count').value);
+        
+        if(betAmount < 10) return alert("Min bet ₹10 hai!");
+
+        const res = await fetch('/api/bet', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ betAmount, userId: currentUser }) 
+        });
+        const data = await res.json();
+        
+        if(!data.success) return alert(data.message);
+        
+        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+        isPlaying = true; 
+        currentMultiplier = 1.00;
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('cashout-btn').style.display = 'block';
+        
+        mines.clear();
+        while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
+        createBoard(); 
+        updateStatusText();
+    }
+
+    function revealCell(cell, index) {
+        if (!isPlaying || cell.classList.contains('revealed') || cell.classList.contains('mine')) return;
+
+        if (mines.has(index)) {
+            loseSound.currentTime = 0; loseSound.play();
+            if(navigator.vibrate) navigator.vibrate(200);
+            cell.classList.add('mine'); cell.innerHTML = '💣';
+            endGame(false);
+        } else {
+            winSound.currentTime = 0; winSound.play();
+            if(navigator.vibrate) navigator.vibrate(50);
+            cell.classList.add('revealed'); cell.innerHTML = '💎';
+            
+            const rect = cell.getBoundingClientRect();
+            createParticles(rect.left + rect.width/2, rect.top + rect.height/2);
+
+            const revealedCount = document.querySelectorAll('.cell.revealed').length;
+            let rawMultiplier = (25 - (revealedCount - 1)) / (25 - mines.size - (revealedCount - 1));
+            currentMultiplier = rawMultiplier * 0.97;
+            
+            // Initial steps adjustment
+            if(revealedCount === 1) {
+                if(mines.size === 1) currentMultiplier = 1.01;
+                else if(mines.size === 3) currentMultiplier = 1.10;
+                else if(mines.size === 5) currentMultiplier = 1.20;
+            }
+            updateStatusText();
+        }
+    }
+
+    async function cashOut() {
+        if(!isPlaying) return;
+        const winnings = betAmount * currentMultiplier;
+        const res = await fetch('/api/cashout', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ winnings, userId: currentUser }) 
+        });
+        const data = await res.json();
+        if(data.success) {
+            document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+            alert(`Mubarak ho! Jeet gaye ₹${winnings.toFixed(2)}`);
+            endGame(true);
+        }
+    }
+
+    function endGame(won) {
+        isPlaying = false;
+        document.getElementById('start-btn').style.display = 'block';
+        document.getElementById('cashout-btn').style.display = 'none';
+        document.querySelectorAll('.cell').forEach(cell => {
+            if (mines.has(parseInt(cell.dataset.index))) {
+                cell.innerHTML = '💣'; cell.classList.add('mine');
+            }
+        });
+        if(!won) {
+            document.getElementById('profit').innerText = `-₹${betAmount.toFixed(2)}`;
+            document.getElementById('profit').style.color = 'red';
+        }
+    }
+
+    // --- 5. UTILS ---
+    function updateStatusText() {
+        document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
+        let curWin = betAmount * currentMultiplier;
+        document.getElementById('profit').innerText = `+₹${(curWin - betAmount).toFixed(2)}`;
+        document.getElementById('cashout-btn').innerText = `Cash Out (₹${curWin.toFixed(2)})`;
+    }
+
+    async function updateLeaderboard() {
+        try {
+            const res = await fetch('/api/leaderboard');
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = data.map((u, i) => {
+                let rankIcon = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
+                return `<tr><td style="padding:10px;">${rankIcon}${u.phone}</td><td style="text-align:right; color:#00ff00;">₹${u.totalProfit.toFixed(2)}</td></tr>`;
+            }).join('');
+        } catch (e) {}
+    }
+
+    function createParticles(x, y) {
+        for (let i = 0; i < 8; i++) {
+            const p = document.createElement('div'); p.classList.add('particle');
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            p.style.setProperty('--x', (Math.random() - 0.5) * 80 + 'px');
+            p.style.setProperty('--y', (Math.random() - 0.5) * 80 + 'px');
+            document.body.appendChild(p); setTimeout(() => p.remove(), 600);
+        }
+    }
+
+    function showEvent(msg) { document.getElementById('event-text').innerText = msg; document.getElementById('event-modal').style.display = 'block'; }
+    function closeEvent() { document.getElementById('event-modal').style.display = 'none'; }
+
+    createBoard();
+    setInterval(updateLeaderboard, 30000);
+</script>
 </body>
 </html>

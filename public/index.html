@@ -168,6 +168,16 @@
             alert("Error connecting to server!");
         }
     }
+
+        window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref) {
+        // Maan lo aapke referral input ki ID 'referralCode' hai
+        document.getElementById('referralCode').value = ref;
+    }
+};
+
 </script>
 </body>
 </html>
