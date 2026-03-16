@@ -97,9 +97,37 @@
 </div>
 
 <script>
+
     // Referral Tracking
+    // URL se referral code pakadna (Jaise hi page khule)
     const urlParams = new URLSearchParams(window.location.search);
-    const refCodeFromURL = urlParams.get('ref');
+    const hiddenReferralCode = urlParams.get('ref') || "";
+
+    async function registerUser() {
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                name, 
+                phone, 
+                password, 
+                referralCode: hiddenReferralCode // 👈 URL wala code server ko bheja
+            })
+        });
+        const data = await res.json();
+        if(data.success) {
+            alert("Registration Successful!");
+            localStorage.setItem('currentUser', phone);
+            window.location.href = '/game.html';
+        } else {
+            alert(data.message);
+        }
+    }
+
     if (refCodeFromURL) {
         localStorage.setItem('tempRef', refCodeFromURL);
     }

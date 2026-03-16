@@ -295,86 +295,51 @@ app.post('/api/user/history', async (req, res) => {
 });
 
 // --- 1. ADMIN DASHBOARD STATS (Total Balance & Pending Tasks) ---
-app.get('/api/admin/stats', async (req, res) => {
-    try {
-        const users = await User.find({});
-        let totalBalance = 0;
-        let pendingCount = 0;
-
-        users.forEach(user => {
-            totalBalance += (user.balance || 0);
-            user.transactions.forEach(tx => {
-                if (tx.status === 'Pending') pendingCount++;
-            });
-        });
-
-        res.json({ success: true, totalBalance, pendingCount });
-    } catch (e) { res.json({ success: false }); }
-});
-
-// --- 2. APPROVE/REJECT LOGIC (Fixing Alert Issue) ---
+// 1. Approve Request Fix (Paisa & Referral Count)
 app.post('/api/admin/approve-request', async (req, res) => {
-    try {
-        const { userPhone, txId, action } = req.body;
-        const user = await User.findOne({ phone: userPhone });
-        if (!user) return res.json({ success: false, message: "User nahi mila!" });
+    const { userPhone, txId, action } = req.body;
+    const user = await User.findOne({ phone: userPhone });
+    if (!user) return res.json({ success: false });
 
-        const tx = user.transactions.find(t => t.id === txId);
-        if (!tx || tx.status !== 'Pending') return res.json({ success: false, message: "Invalid Request!" });
-
-        if (action === 'Approve') {
-            tx.status = 'Success';
-
-            if (tx.type === 'Deposit') {
-                // 1. User ko uska deposit + 10% bonus do
-                const bonus = Number(tx.amount) * 0.10;
-                user.balance += (Number(tx.amount) + bonus);
-
-                // 2. REFERRAL REWARD LOGIC (Strict Fix)
-                const successDeposits = user.transactions.filter(t => t.type === 'Deposit' && t.status === 'Success');
-                
-                // Agar ye pehla deposit hai aur user kisi ke code se aaya hai
-                // approve-request ke andar referral wala part
-if (successDeposits.length === 1 && user.referredBy) {
-    // URL se aaya hua code hamesha capital/small ka lafda kar sakta hai
-    const cleanCode = user.referredBy.trim().toUpperCase();
-    const referrer = await User.findOne({ referralCode: cleanCode });
-    
-    if (referrer) {
-        referrer.balance += 20;
-        referrer.referralCount = (referrer.referralCount || 0) + 1;
-        // ... baaki history logic wahi
-                        
-                        referrer.transactions.unshift({
-                            id: `REF-${Date.now()}`,
-                            type: 'Referral Bonus',
-                            amount: 20,
-                            date: new Date().toLocaleString('en-IN'),
-                            status: 'Success',
-                            note: `Bonus for ${userPhone}'s 1st deposit`
-                        });
-
-                        referrer.markModified('transactions');
-                        await referrer.save();
-                        console.log(`✅ Success: ₹20 sent to Referrer (${referrer.phone})`);
-                    } else {
-                        console.log(`❌ Error: Referrer with code ${user.referredBy} not found.`);
-                    }
+    const tx = user.transactions.find(t => t.id === txId);
+    if (tx && tx.status === 'Pending' && action === 'Approve') {
+        tx.status = 'Success';
+        if (tx.type === 'Deposit') {
+            user.balance += Number(tx.amount);
+            
+            // Referral Logic
+            const deposits = user.transactions.filter(t => t.type === 'Deposit' && t.status === 'Success');
+            if (deposits.length === 1 && user.referredBy) {
+                const referrer = await User.findOne({ referralCode: user.referredBy.toUpperCase() });
+                if (referrer) {
+                    referrer.balance += 20;
+                    referrer.referralCount = (referrer.referralCount || 0) + 1; // Counter Update
+                    referrer.transactions.unshift({ type: 'Referral Bonus', amount: 20, date: new Date().toLocaleString(), status: 'Success' });
+                    referrer.markModified('transactions');
+                    await referrer.save();
                 }
             }
-        } else {
-            tx.status = 'Rejected';
-            if (tx.type === 'Withdraw') user.balance += Number(tx.amount);
         }
-
-        user.markModified('transactions');
-        await user.save();
-        res.json({ success: true, message: `Approved! Referral Reward processed.` });
-    } catch (e) {
-        console.error("Approve Error:", e);
-        res.json({ success: false, message: "Server Error!" });
+    } else if (action === 'Reject') {
+        tx.status = 'Rejected';
     }
+    user.markModified('transactions');
+    await user.save();
+    res.json({ success: true });
 });
+
+// 2. Admin Stats Fix (Counter for Dashboard)
+app.get('/api/admin/stats', async (req, res) => {
+    const users = await User.find({});
+    let totalBal = 0, pending = 0, totalRefs = 0;
+    users.forEach(u => {
+        totalBal += u.balance;
+        totalRefs += (u.referralCount || 0); // Isse center counter chalega
+        u.transactions.forEach(t => { if(t.status === 'Pending') pending++; });
+    });
+    res.json({ success: true, totalBalance: totalBal, pendingCount: pending, totalReferrals: totalRefs });
+});
+
 app.get('/api/admin/pending-requests', async (req, res) => {
     try {
         // Un users ko dhoondo jinke transactions mein status 'Pending' hai

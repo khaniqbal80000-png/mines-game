@@ -290,26 +290,24 @@
             <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
 
 <script>
+
+    // Sounds
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) window.location.href = '/index.html';
 
     const board = document.getElementById('game-board');
     let betAmount = 0, mines = new Set(), isPlaying = false, currentMultiplier = 1.00;
 
-    // Sounds
     const winSound = new Audio('gem.mp3');
     const loseSound = new Audio('bomb.mp3');
 
-    // --- 1. INITIAL LOAD ---
     window.addEventListener('load', async () => {
         await fetchBalance();
         await updateReferralLink();
         updateLeaderboard();
         checkBonus();
-        showEvent("Tournament: 10 Mines ke sath ₹500 Bonus jeetein!");
     });
 
-    // --- 2. BALANCE & REFERRAL LOGIC ---
     async function fetchBalance() {
         try {
             const res = await fetch('/api/user', { 
@@ -319,7 +317,6 @@
             });
             const data = await res.json();
             if(data.success) {
-                // Top balance update
                 document.getElementById('top-balance').innerText = `₹${data.balance.toFixed(2)}`;
             }
         } catch (e) { console.log("Balance fetch error"); }
@@ -333,15 +330,10 @@
                 body: JSON.stringify({ userId: currentUser })
             });
             const data = await res.json();
-
             if (data.success) {
-                // Phone ki jagah Random Code use karega (Back-end fix ke baad)
                 const refCode = data.referralCode || currentUser;
                 const myLink = `https://build-x-mines.onrender.com?ref=${refCode}`;
-                
-                const linkElem = document.getElementById('my-ref-link');
-                if(linkElem) linkElem.innerText = myLink;
-
+                document.getElementById('my-ref-link').innerText = myLink;
                 window.generatedReferralLink = myLink; 
             }
         } catch (e) { console.log("Referral link error"); }
@@ -353,6 +345,40 @@
             alert("🚀 Referral Link Copy Ho Gaya!\n" + linkToCopy);
         });
     }
+
+    // --- GAME FUNCTIONS ---
+    async function startGame() {
+        betAmount = parseFloat(document.getElementById('bet').value);
+        const mCount = parseInt(document.getElementById('mine-count').value);
+        if(betAmount < 10) return alert("Min bet ₹10!");
+
+        const res = await fetch('/api/bet', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ betAmount, userId: currentUser }) });
+        const data = await res.json();
+        if(!data.success) return alert(data.message);
+        
+        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
+        isPlaying = true; mines.clear();
+        while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
+        createBoard(); updateStatusText();
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('cashout-btn').style.display = 'block';
+    }
+
+    // ... (ReveallCell, createBoard, createParticles, cashOut etc. remains same as yours)
+    
+    async function updateLeaderboard() {
+        try {
+            const res = await fetch('/api/leaderboard');
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = data.map((u, i) => {
+                let rankIcon = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
+                return `<tr><td>${rankIcon}${u.phone}</td><td style="text-align:right;">₹${u.totalProfit.toFixed(2)}</td></tr>`;
+            }).join('');
+        } catch (e) {}
+    }
+
+    createBoard();
 
     // --- 3. BONUS LOGIC ---
     async function checkBonus() {
@@ -399,34 +425,6 @@
             cell.onclick = () => revealCell(cell, i);
             board.appendChild(cell);
         }
-    }
-
-    async function startGame() {
-        winSound.play().then(() => { winSound.pause(); winSound.currentTime = 0; });
-        betAmount = parseFloat(document.getElementById('bet').value);
-        const mCount = parseInt(document.getElementById('mine-count').value);
-        
-        if(betAmount < 10) return alert("Min bet ₹10 hai!");
-
-        const res = await fetch('/api/bet', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ betAmount, userId: currentUser }) 
-        });
-        const data = await res.json();
-        
-        if(!data.success) return alert(data.message);
-        
-        document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-        isPlaying = true; 
-        currentMultiplier = 1.00;
-        document.getElementById('start-btn').style.display = 'none';
-        document.getElementById('cashout-btn').style.display = 'block';
-        
-        mines.clear();
-        while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
-        createBoard(); 
-        updateStatusText();
     }
 
     function revealCell(cell, index) {
@@ -496,18 +494,6 @@
         let curWin = betAmount * currentMultiplier;
         document.getElementById('profit').innerText = `+₹${(curWin - betAmount).toFixed(2)}`;
         document.getElementById('cashout-btn').innerText = `Cash Out (₹${curWin.toFixed(2)})`;
-    }
-
-    async function updateLeaderboard() {
-        try {
-            const res = await fetch('/api/leaderboard');
-            const data = await res.json();
-            const tbody = document.getElementById('leaderboard-body');
-            tbody.innerHTML = data.map((u, i) => {
-                let rankIcon = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
-                return `<tr><td style="padding:10px;">${rankIcon}${u.phone}</td><td style="text-align:right; color:#00ff00;">₹${u.totalProfit.toFixed(2)}</td></tr>`;
-            }).join('');
-        } catch (e) {}
     }
 
     function createParticles(x, y) {
