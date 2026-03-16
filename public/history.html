@@ -98,39 +98,48 @@
             const data = await res.json();
             const listContainer = document.getElementById('transaction-list');
 
-            if (data.success && data.history.length > 0) {
-                listContainer.innerHTML = data.history.map(tx => {
-                    // Type ke hisab se class aur icon set karna
-                    const typeClass = tx.type.toLowerCase();
-                    const statusClass = tx.status.toLowerCase();
+            if (data.success && data.history && data.history.length > 0) {
+                // Reverse isliye taaki naye transactions upar dikhein
+                const sortedHistory = data.history.reverse(); 
+
+                listContainer.innerHTML = sortedHistory.map(tx => {
+                    const typeClass = tx.type ? tx.type.toLowerCase().replace(" ", "-") : "other";
+                    const statusClass = tx.status ? tx.status.toLowerCase() : "pending";
                     
+                    // Logic: Kaunse transactions Green honge?
+                    const isPositive = ['Win', 'Deposit', 'Referral Bonus', 'Bonus'].includes(tx.type);
+                    const color = isPositive ? '#00e701' : '#ff4444';
+                    const symbol = isPositive ? '+' : '-';
+
                     return `
-                        <div class="history-item ${typeClass}">
+                        <div class="history-item ${typeClass}" style="border-left: 4px solid ${color}; background: #1a1f29; margin-bottom: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
                             <div class="details">
-                                <h4>${tx.type}</h4>
-                                <p>${tx.date}</p>
-                                ${tx.utr ? `<p style="font-size:10px;">UTR: ${tx.utr}</p>` : ''}
-                                ${tx.upiId ? `<p style="font-size:10px;">UPI: ${tx.upiId}</p>` : ''}
+                                <h4 style="margin: 0; color: #fff; font-size: 16px;">${tx.type}</h4>
+                                <p style="margin: 5px 0; color: #8c96a5; font-size: 12px;">${tx.date}</p>
+                                ${tx.utr ? `<p style="font-size:10px; color: #555;">UTR: ${tx.utr}</p>` : ''}
+                                ${tx.upiId ? `<p style="font-size:10px; color: #555;">UPI: ${tx.upiId}</p>` : ''}
+                                ${tx.note ? `<p style="font-size:10px; color: #e6c27a;">${tx.note}</p>` : ''}
                             </div>
-                            <div class="amount-box">
-                                <h4 style="color: ${tx.type === 'Win' || tx.type === 'Deposit' ? '#4caf50' : '#ff4444'}">
-                                    ${tx.type === 'Win' || tx.type === 'Deposit' ? '+' : '-'}₹${tx.amount}
+                            <div class="amount-box" style="text-align: right;">
+                                <h4 style="margin: 0; color: ${color}; font-size: 18px;">
+                                    ${symbol}₹${tx.amount}
                                 </h4>
-                                <span class="status ${statusClass}">${tx.status}</span>
+                                <span class="status ${statusClass}" style="font-size: 10px; padding: 2px 8px; border-radius: 4px; background: ${statusClass === 'success' ? '#00e70122' : '#ff444422'}; color: ${color};">
+                                    ${tx.status}
+                                </span>
                             </div>
                         </div>
                     `;
                 }).join('');
             } else {
-                listContainer.innerHTML = '<div class="empty-state">Koi transaction nahi mila!</div>';
+                listContainer.innerHTML = '<div class="empty-state" style="text-align:center; padding:50px; color:#8c96a5;">Koi transaction nahi mila! 😎</div>';
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('transaction-list').innerHTML = '<div class="empty-state">Server connection failed!</div>';
+            document.getElementById('transaction-list').innerHTML = '<div class="empty-state" style="text-align:center; padding:50px; color:red;">Server connection failed!</div>';
         }
     }
 
-    // Page load hote hi history load karo
     window.onload = loadHistory;
 </script>
 </body>

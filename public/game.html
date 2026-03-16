@@ -290,24 +290,31 @@
             <div class="winner-ticker"><div id="ticker-content">User 98***72 won ₹150.20! | User 81***05 won ₹45.00! | User 70***12 won ₹320.50!</div></div>
 
 <script>
-
-    // Sounds
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) window.location.href = '/index.html';
 
     const board = document.getElementById('game-board');
     let betAmount = 0, mines = new Set(), isPlaying = false, currentMultiplier = 1.00;
 
+    // Sounds
     const winSound = new Audio('gem.mp3');
     const loseSound = new Audio('bomb.mp3');
 
+    // --- 1. SAB KUCH EK SAATH LOAD KAREIN ---
     window.addEventListener('load', async () => {
+        // Balance fetch karo
         await fetchBalance();
+        // Referral link generator
         await updateReferralLink();
+        // Leaderboard load karo
         updateLeaderboard();
+        // Bonus check karo
         checkBonus();
+        // Event message dikhao
+        showEvent("Tournament: 10 Mines ke sath ₹500 Bonus jeetein!");
     });
 
+    // --- 2. DATA FETCH FUNCTIONS ---
     async function fetchBalance() {
         try {
             const res = await fetch('/api/user', { 
@@ -330,10 +337,15 @@
                 body: JSON.stringify({ userId: currentUser })
             });
             const data = await res.json();
+
             if (data.success) {
+                // Agar random code nahi mila toh phone number use karega
                 const refCode = data.referralCode || currentUser;
                 const myLink = `https://build-x-mines.onrender.com?ref=${refCode}`;
-                document.getElementById('my-ref-link').innerText = myLink;
+                
+                const linkElem = document.getElementById('my-ref-link');
+                if(linkElem) linkElem.innerText = myLink;
+
                 window.generatedReferralLink = myLink; 
             }
         } catch (e) { console.log("Referral link error"); }
@@ -346,7 +358,7 @@
         });
     }
 
-    // --- GAME FUNCTIONS ---
+    // --- 3. GAME CORE LOGIC ---
     async function startGame() {
         betAmount = parseFloat(document.getElementById('bet').value);
         const mCount = parseInt(document.getElementById('mine-count').value);
@@ -357,65 +369,15 @@
         if(!data.success) return alert(data.message);
         
         document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-        isPlaying = true; mines.clear();
+        isPlaying = true; currentMultiplier = 1.00;
+        mines.clear();
         while(mines.size < mCount) mines.add(Math.floor(Math.random() * 25));
-        createBoard(); updateStatusText();
+        createBoard(); 
+        updateStatusText();
         document.getElementById('start-btn').style.display = 'none';
         document.getElementById('cashout-btn').style.display = 'block';
     }
 
-    // ... (ReveallCell, createBoard, createParticles, cashOut etc. remains same as yours)
-    
-    async function updateLeaderboard() {
-        try {
-            const res = await fetch('/api/leaderboard');
-            const data = await res.json();
-            const tbody = document.getElementById('leaderboard-body');
-            tbody.innerHTML = data.map((u, i) => {
-                let rankIcon = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
-                return `<tr><td>${rankIcon}${u.phone}</td><td style="text-align:right;">₹${u.totalProfit.toFixed(2)}</td></tr>`;
-            }).join('');
-        } catch (e) {}
-    }
-
-    createBoard();
-
-    // --- 3. BONUS LOGIC ---
-    async function checkBonus() {
-        try {
-            const res = await fetch(`/api/check-bonus?t=${Date.now()}`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: currentUser }) 
-            });
-            const data = await res.json();
-            const modal = document.getElementById('bonus-modal');
-            if(data.isNewUser) {
-                modal.style.setProperty('display', 'flex', 'important');
-            } else {
-                modal.style.setProperty('display', 'none', 'important');
-            }
-        } catch(e) { console.log("Bonus check error"); }
-    }
-
-    async function claimBonus() {
-        try {
-            document.getElementById('gift-box').innerHTML = "💎";
-            const res = await fetch('/api/claim-bonus', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: currentUser }) 
-            });
-            const data = await res.json();
-            if(data.success) {
-                alert("🎉 ₹20 Bonus Mil Gaya!");
-                document.getElementById('bonus-modal').style.setProperty('display', 'none', 'important');
-                fetchBalance();
-            }
-        } catch(e) { alert("Connection error!"); }
-    }
-
-    // --- 4. GAME CORE LOGIC ---
     function createBoard() {
         board.innerHTML = '';
         for (let i = 0; i < 25; i++) {
@@ -432,12 +394,10 @@
 
         if (mines.has(index)) {
             loseSound.currentTime = 0; loseSound.play();
-            if(navigator.vibrate) navigator.vibrate(200);
             cell.classList.add('mine'); cell.innerHTML = '💣';
             endGame(false);
         } else {
             winSound.currentTime = 0; winSound.play();
-            if(navigator.vibrate) navigator.vibrate(50);
             cell.classList.add('revealed'); cell.innerHTML = '💎';
             
             const rect = cell.getBoundingClientRect();
@@ -447,7 +407,6 @@
             let rawMultiplier = (25 - (revealedCount - 1)) / (25 - mines.size - (revealedCount - 1));
             currentMultiplier = rawMultiplier * 0.97;
             
-            // Initial steps adjustment
             if(revealedCount === 1) {
                 if(mines.size === 1) currentMultiplier = 1.01;
                 else if(mines.size === 3) currentMultiplier = 1.10;
@@ -468,7 +427,7 @@
         const data = await res.json();
         if(data.success) {
             document.getElementById('top-balance').innerText = `₹${data.newBalance.toFixed(2)}`;
-            alert(`Mubarak ho! Jeet gaye ₹${winnings.toFixed(2)}`);
+            alert(`Jeet gaye ₹${winnings.toFixed(2)}`);
             endGame(true);
         }
     }
@@ -488,12 +447,47 @@
         }
     }
 
-    // --- 5. UTILS ---
+    // --- 4. UTILS & BONUS ---
     function updateStatusText() {
         document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
         let curWin = betAmount * currentMultiplier;
         document.getElementById('profit').innerText = `+₹${(curWin - betAmount).toFixed(2)}`;
         document.getElementById('cashout-btn').innerText = `Cash Out (₹${curWin.toFixed(2)})`;
+    }
+
+    async function checkBonus() {
+        try {
+            const res = await fetch('/api/check-bonus', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ userId: currentUser }) 
+            });
+            const data = await res.json();
+            const modal = document.getElementById('bonus-modal');
+            if(data.isNewUser) modal.style.display = 'flex';
+        } catch(e) {}
+    }
+
+    async function claimBonus() {
+        const res = await fetch('/api/claim-bonus', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser }) });
+        const data = await res.json();
+        if(data.success) {
+            alert("🎉 ₹20 Bonus Mil Gaya!");
+            document.getElementById('bonus-modal').style.display = 'none';
+            fetchBalance();
+        }
+    }
+
+    async function updateLeaderboard() {
+        try {
+            const res = await fetch('/api/leaderboard');
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = data.map((u, i) => {
+                let rankIcon = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : `${i + 1}. `;
+                return `<tr><td>${rankIcon}${u.phone}</td><td style="text-align:right;">₹${u.totalProfit.toFixed(2)}</td></tr>`;
+            }).join('');
+        } catch (e) {}
     }
 
     function createParticles(x, y) {
@@ -505,39 +499,6 @@
             document.body.appendChild(p); setTimeout(() => p.remove(), 600);
         }
     }
-
-    // 1. URL se referral code pakadna
-let hiddenReferralCode = "";
-window.onload = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    hiddenReferralCode = urlParams.get('ref') || "";
-    console.log("Referral Code Found in URL:", hiddenReferralCode);
-};
-
-// 2. Registration function mein ise bhejiyega
-async function handleRegister() {
-    const name = document.getElementById('name').value;
-    const phone = document.getElementById('phone').value;
-    const password = document.getElementById('password').value;
-
-    const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            name, 
-            phone, 
-            password, 
-            referralCode: hiddenReferralCode // 👈 Ye URL wala code server ko jayega
-        })
-    });
-    const data = await res.json();
-    if(data.success) {
-        alert("Registration Successful!");
-        window.location.href = '/game.html';
-    } else {
-        alert(data.message);
-    }
-}
 
     function showEvent(msg) { document.getElementById('event-text').innerText = msg; document.getElementById('event-modal').style.display = 'block'; }
     function closeEvent() { document.getElementById('event-modal').style.display = 'none'; }

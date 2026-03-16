@@ -97,52 +97,54 @@
 </div>
 
 <script>
-
-    // Referral Tracking
-    // URL se referral code pakadna (Jaise hi page khule)
+    // 1. URL se Referral Code pakadna aur Save karna
     const urlParams = new URLSearchParams(window.location.search);
-    const hiddenReferralCode = urlParams.get('ref') || "";
+    const refFromURL = urlParams.get('ref');
 
-    async function registerUser() {
-        const name = document.getElementById('name').value;
-        const phone = document.getElementById('phone').value;
-        const password = document.getElementById('password').value;
+    // Agar URL mein code hai, toh usey 'tempRef' mein save kar lo
+    if (refFromURL) {
+        localStorage.setItem('tempRef', refFromURL);
+        console.log("Referral Code Locked:", refFromURL);
+    }
 
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                name, 
-                phone, 
-                password, 
-                referralCode: hiddenReferralCode // 👈 URL wala code server ko bheja
-            })
-        });
-        const data = await res.json();
-        if(data.success) {
-            alert("Registration Successful!");
-            localStorage.setItem('currentUser', phone);
-            window.location.href = '/game.html';
-        } else {
-            alert(data.message);
+    // 2. Register Function (FIXED)
+    async function register() {
+        // IDs check kar lena: reg-name, reg-phone, reg-pass
+        const name = document.getElementById('reg-name').value;
+        const phone = document.getElementById('reg-phone').value;
+        const password = document.getElementById('reg-pass').value;
+        
+        // LocalStorage se saved referral code uthao
+        const savedRef = localStorage.getItem('tempRef') || "";
+
+        if (!name || !phone || !password) return alert("Saari details bharo bhai!");
+
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    name, 
+                    phone, 
+                    password, 
+                    referralCode: savedRef // 👈 Server ko sahi key bhej rahe hain
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert("🎉 Registration Successful! Ab Login karein.");
+                localStorage.removeItem('tempRef'); // Kaam hone ke baad hata do
+                showLogin(); // Login form par le jao
+            } else {
+                alert(data.message);
+            }
+        } catch (e) {
+            alert("Server connection failed!");
         }
     }
 
-    if (refCodeFromURL) {
-        localStorage.setItem('tempRef', refCodeFromURL);
-    }
-
-    // Toggle Functions (FIXED)
-    function showRegister() {
-        document.getElementById('login-form').classList.remove('active');
-        document.getElementById('register-form').classList.add('active');
-    }
-    function showLogin() {
-        document.getElementById('login-form').classList.add('active');
-        document.getElementById('register-form').classList.remove('active');
-    }
-
-    // Login Function (FIXED IDs)
+    // 3. Login Function (FIXED)
     async function login() {
         const phone = document.getElementById('login-phone').value;
         const password = document.getElementById('login-pass').value;
@@ -164,48 +166,28 @@
                 alert(data.message);
             }
         } catch (e) {
-            alert("Server connection failed!");
+            alert("Login fail ho gaya!");
         }
     }
 
-    // Register Function (Same as before but fixed toggle)
-    async function register() {
-        const name = document.getElementById('reg-name').value;
-        const phone = document.getElementById('reg-phone').value;
-        const password = document.getElementById('reg-pass').value;
-        const savedRef = localStorage.getItem('tempRef');
+    // 4. Toggle Functions
+    function showRegister() {
+        document.getElementById('login-form').classList.remove('active');
+        document.getElementById('register-form').classList.add('active');
+    }
+    function showLogin() {
+        document.getElementById('login-form').classList.add('active');
+        document.getElementById('register-form').classList.remove('active');
+    }
 
-        if (!name || !phone || !password) return alert("Saari details bharo!");
-
-        try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, password, refCode: savedRef })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                alert("🎉 Success! Login karein.");
-                localStorage.removeItem('tempRef');
-                showLogin();
-            } else {
-                alert(data.message);
-            }
-        } catch (e) {
-            alert("Error connecting to server!");
+    // Page load par agar referral input hai toh bhar do (Backup)
+    window.onload = () => {
+        const currentRef = localStorage.getItem('tempRef');
+        const refInput = document.getElementById('referralCode');
+        if (currentRef && refInput) {
+            refInput.value = currentRef;
         }
-    }
-
-        window.onload = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const ref = urlParams.get('ref');
-    if (ref) {
-        // Maan lo aapke referral input ki ID 'referralCode' hai
-        document.getElementById('referralCode').value = ref;
-    }
-};
-
+    };
 </script>
 </body>
 </html>

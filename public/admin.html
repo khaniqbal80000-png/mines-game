@@ -177,137 +177,30 @@
     </div>
 
     <script>
-        const SECRET_ADMIN_PASS = "s1o2h3e4l5";
+    const SECRET_ADMIN_PASS = "s1o2h3e4l5";
 
-        function checkAdminPass() {
-            if (document.getElementById('admin-pass').value === SECRET_ADMIN_PASS) {
-                document.getElementById('admin-login-overlay').style.display = 'none';
-                refreshAdminData();
-            } else { alert("Galat Password!"); }
+    // --- 1. LOGIN LOGIC ---
+    function checkAdminPass() {
+        const input = document.getElementById('admin-pass').value;
+        if (input === SECRET_ADMIN_PASS) {
+            document.getElementById('admin-login-overlay').style.display = 'none';
+            localStorage.setItem('admin_auth', 'true'); // Auth save kar lo taaki baar baar na maange
+            refreshAdminData();
+        } else { 
+            alert("Galat Password!"); 
         }
-
-        async function refreshAdminData() {
-            loadPendingTxns();
-            loadGiftCodes();
-        }
-
-        async function loadPendingTxns() {
-            const list = document.getElementById('txn-list');
-            const res = await fetch('/api/admin/transactions');
-            const data = await res.json();
-            document.getElementById('total-pending').innerText = data.pendingTxns.length;
-            list.innerHTML = data.pendingTxns.length ? '' : '<p style="text-align:center;color:#888;">All clear!</p>';
-            
-            data.pendingTxns.forEach(txn => {
-                list.innerHTML += `
-                    <div class="txn-card">
-                        <div>
-                            <div style="font-weight:bold;">${txn.type} <span class="user-tag">${txn.userPhone}</span></div>
-                            <small style="color:#888;">${txn.id || txn.upi}</small>
-                        </div>
-                        <div style="font-weight:bold; color:${txn.type=='Deposit'?'#00e701':'#ff2a2a'}">₹${txn.amount}</div>
-                        <div>
-                            <button onclick="takeAction('${txn.id}', 'Approve', '${txn.userPhone}')" class="btn btn-approve" style="padding:5px 10px;">OK</button>
-                            <button onclick="takeAction('${txn.id}', 'Reject', '${txn.userPhone}')" class="btn btn-reject" style="padding:5px 10px;">X</button>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        async function createGiftCode() {
-            const code = document.getElementById('new-gift-code').value;
-            const amount = document.getElementById('gift-amount').value;
-            const usageLimit = document.getElementById('gift-limit').value;
-            const expiryDays = document.getElementById('gift-expiry').value;
-
-            const res = await fetch('/api/admin/create-gift', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ code, amount, usageLimit, expiryDays })
-            });
-            const data = await res.json();
-            if(data.success) { alert("Code Created!"); loadGiftCodes(); }
-        }
-
-        async function loadGiftCodes() {
-            const res = await fetch('/api/admin/gift-codes');
-            const data = await res.json();
-            const tbody = document.getElementById('gift-list-body');
-            tbody.innerHTML = data.codes.map(gift => `
-                <tr style="border-bottom: 1px solid #222;">
-                    <td style="padding: 10px; color: var(--gold); font-weight:bold;">${gift.code}</td>
-                    <td style="padding: 10px;">₹${gift.amount}</td>
-                    <td style="padding: 10px; text-align: center;">${gift.usedCount} / ${gift.usageLimit}</td>
-                    <td style="padding: 10px; text-align: right;">
-                        <button onclick="deleteGiftCode('${gift._id}')" style="background:none; border:none; color:red; cursor:pointer;">🗑️</button>
-                    </td>
-                </tr>`).join('');
-        }
-
-        async function deleteGiftCode(id) {
-    if(!confirm("Pakka delete karna hai?")) return;
-    
-    try {
-        // Yahan backtick (`) use karein taaki ${id} kaam kare
-        const res = await fetch(`/api/admin/delete-gift/${id}`, { 
-            method: 'DELETE' 
-        });
-        const data = await res.json();
-        
-        if(data.success) {
-            alert("🗑️ Code deleted!");
-            loadGiftCodes(); // Table refresh karo
-        } else {
-            alert("Delete nahi ho paya!");
-        }
-    } catch (e) {
-        console.error("Delete error:", e);
-        alert("Server connection failed!");
     }
-}
 
-        async function takeAction(txnId, action, userPhone) {
-            await fetch('/api/admin/action', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ txnId, action, userPhone })
-            });
-            loadPendingTxns();
-        }
+    // --- 2. REFRESH DATA (Master Function) ---
+    async function refreshAdminData() {
+        console.log("Refreshing Admin Dashboard...");
+        loadRequests();      // Pending Deposit/Withdraw list
+        loadStats();         // Total Balance & Pending Count
+        loadGiftCodes();     // Gift Card list
+        loadPromoterStats(); // Top Referrers list
+    }
 
-        window.onload = () => { document.getElementById('admin-login-overlay').style.display = 'flex'; };
-        // Referral data load karne ka function
-async function loadReferralStats() {
-    try {
-        const res = await fetch('/api/admin/referral-stats');
-        const data = await res.json();
-        const tbody = document.getElementById('referral-list-body');
-        tbody.innerHTML = '';
-
-        data.topReferrers.forEach(user => {
-            tbody.innerHTML += `
-                <tr style="border-bottom: 1px solid #222;">
-                    <td style="padding: 12px;">${user.phone}</td>
-                    <td style="padding: 12px; text-align: center; color: var(--gem-color); font-weight: bold;">${user.referralCount}</td>
-                    <td style="padding: 12px; text-align: right; color: var(--gold);">₹${user.referralEarnings}</td>
-                </tr>`;
-        });
-    } catch (e) { console.error("Referral stats error"); }
-}
-
-// Reward amount update karne ka (Abhi ke liye prompt se ya local storage se handle kar sakte hain)
-function updateRefSettings() {
-    const amt = document.getElementById('ref-reward-input').value;
-    if(!amt) return alert("Amount daalo bhai!");
-    
-    // Server ko settings bhejne ka API (Optional, ya direct server.js mein change karein)
-    alert("Reward ₹" + amt + " set ho gaya! (Make sure server.js matches this)");
-}
-
-// RefreshAdminData() function mein isse bhi add kar dena
-// async function refreshAdminData() { ... loadReferralStats(); ... }
-
-    // 1. Requests Load Karne ka Function
+    // --- 3. REQUESTS & ACTIONS ---
     async function loadRequests() {
         try {
             const res = await fetch('/api/admin/pending-requests');
@@ -330,78 +223,101 @@ function updateRefSettings() {
             } else {
                 container.innerHTML = '<p style="text-align: center; color: #888;">Koi pending request nahi hai! 😎</p>';
             }
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error("Request Load Error:", e); }
     }
 
+    async function updateStatus(phone, txId, action) {
+        if(!confirm(`Bhai, pakka ${action} karna hai?`)) return;
+        try {
+            const res = await fetch('/api/admin/approve-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userPhone: phone, txId: txId, action: action })
+            });
+            const data = await res.json();
+            alert(data.message);
+            refreshAdminData(); // Sab kuch ek saath refresh karo
+        } catch (e) { alert("Action fail ho gaya!"); }
+    }
+
+    // --- 4. STATS & PROMOTERS ---
     async function loadStats() {
-    try {
-        const res = await fetch('/api/admin/stats');
-        const data = await res.json();
-        if (data.success) {
-            // Maan lijiye aapki IDs 'total-bal' aur 'pending-tasks' hain
-            document.getElementById('total-bal').innerText = `₹${data.totalBalance.toFixed(2)}`;
-            document.getElementById('pending-tasks').innerText = data.pendingCount;
-        }
-    } catch (e) { console.log("Stats error"); }
-}
+        try {
+            const res = await fetch('/api/admin/stats');
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('total-bal').innerText = `₹${data.totalBalance.toFixed(2)}`;
+                document.getElementById('pending-tasks').innerText = data.pendingCount;
+            }
+        } catch (e) { console.log("Stats error"); }
+    }
 
-// updateStatus function ko check karein ki ye fetch sahi bhej raha hai
-async function updateStatus(phone, txId, action) {
-    if(!confirm(`Bhai, pakka ${action} karna hai?`)) return;
+    async function loadPromoterStats() {
+        try {
+            const res = await fetch('/api/admin/referral-stats');
+            const data = await res.json();
+            const container = document.getElementById('promoter-list'); 
+            if (data.success && data.promoters.length > 0) {
+                container.innerHTML = data.promoters.map((p, index) => `
+                    <tr style="border-bottom: 1px solid #222;">
+                        <td style="padding: 10px;">${index + 1}</td>
+                        <td style="padding: 10px;">${p.phone}</td>
+                        <td style="padding: 10px; text-align: center;">${p.referralCount}</td>
+                        <td style="padding: 10px; text-align: right; color: #00e701;">₹${p.totalEarned.toFixed(2)}</td>
+                    </tr>`).join('');
+            }
+        } catch (e) { console.log("Referral Stats error"); }
+    }
 
-    try {
-        const res = await fetch('/api/admin/approve-request', {
+    // --- 5. GIFT CODES ---
+    async function createGiftCode() {
+        const code = document.getElementById('new-gift-code').value;
+        const amount = document.getElementById('gift-amount').value;
+        const usageLimit = document.getElementById('gift-limit').value;
+        const res = await fetch('/api/admin/create-gift', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userPhone: phone, txId: txId, action: action })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code, amount, usageLimit })
         });
         const data = await res.json();
-        alert(data.message);
-        
-        // Refresh Everything
-        loadRequests(); 
-        loadStats();
-    } catch (e) { alert("Action fail ho gaya!"); }
-}
+        if(data.success) { alert("Code Created!"); loadGiftCodes(); }
+    }
 
-// Sab kuch load karo
-window.onload = () => {
-    loadRequests();
-    loadStats();
-};
-
-        async function loadPromoterStats() {
-    try {
-        const res = await fetch('/api/admin/referral-stats');
-        const data = await res.json();
-        
-        // Maan lijiye aapke table body ki ID 'promoter-list' hai
-        const container = document.getElementById('promoter-list'); 
-        
-        if (data.success && data.promoters.length > 0) {
-            container.innerHTML = data.promoters.map((p, index) => `
+    async function loadGiftCodes() {
+        try {
+            const res = await fetch('/api/admin/gift-codes');
+            const data = await res.json();
+            const tbody = document.getElementById('gift-list-body');
+            tbody.innerHTML = data.codes.map(gift => `
                 <tr style="border-bottom: 1px solid #222;">
-                    <td style="padding: 10px;">${index + 1}</td>
-                    <td style="padding: 10px;">${p.phone}</td>
-                    <td style="padding: 10px; text-align: center;">${p.referralCount}</td>
-                    <td style="padding: 10px; text-align: right; color: #00e701;">₹${p.totalEarned.toFixed(2)}</td>
-                </tr>
-            `).join('');
-        } else {
-            container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Abhi tak koi promoter nahi hai!</td></tr>';
+                    <td style="padding: 10px; color: gold; font-weight:bold;">${gift.code}</td>
+                    <td style="padding: 10px;">₹${gift.amount}</td>
+                    <td style="padding: 10px; text-align: center;">${gift.usedCount} / ${gift.usageLimit}</td>
+                    <td style="padding: 10px; text-align: right;">
+                        <button onclick="deleteGiftCode('${gift._id}')" style="background:none; border:none; color:red; cursor:pointer;">🗑️</button>
+                    </td>
+                </tr>`).join('');
+        } catch (e) {}
+    }
+
+    async function deleteGiftCode(id) {
+        if(!confirm("Delete karna hai?")) return;
+        const res = await fetch(`/api/admin/delete-gift/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if(data.success) loadGiftCodes();
+    }
+
+    // --- MASTER ONLOAD ---
+    window.onload = () => {
+        // Overlay dikhao
+        document.getElementById('admin-login-overlay').style.display = 'flex';
+        
+        // Agar pehle se logged in hai toh data load karlo (Optional)
+        if(localStorage.getItem('admin_auth') === 'true') {
+            // document.getElementById('admin-login-overlay').style.display = 'none';
+            // refreshAdminData();
         }
-    } catch (e) { console.log("Referral Stats error"); }
-}
-
-// Ise bhi window.onload mein add kar dein
-window.onload = () => {
-    loadRequests();
-    loadStats();
-    loadPromoterStats(); // 👈 Ye naya call
-};
-
-    </script>
+    };
+</script>
 </body>
 </html>

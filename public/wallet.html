@@ -114,15 +114,16 @@
     </div>
 
   <script>
-        // Check karna ki user login hai ya nahi
-        const currentUser = localStorage.getItem('currentUser');
-        if (!currentUser) {
-            alert("Aapko pehle Login karna hoga!");
-            window.location.href = '/index.html';
-        }
+    // 1. Check karna ki user login hai ya nahi
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+        alert("Aapko pehle Login karna hoga!");
+        window.location.href = '/index.html';
+    }
 
-        async function fetchBalance() {
-            // Balance laane ke liye bhi user ki ID bhejni hogi
+    // 2. Balance Load karne ka function
+    async function fetchBalance() {
+        try {
             const res = await fetch('/api/user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -130,35 +131,47 @@
             });
             const data = await res.json();
             if(data.success) {
-                document.getElementById('display-balance').innerText = data.balance.toFixed(2);
+                // Check karein ki aapki ID 'display-balance' hi hai ya 'top-balance'
+                const balElement = document.getElementById('display-balance');
+                if(balElement) balElement.innerText = data.balance.toFixed(2);
             }
+        } catch (e) { console.log("Balance error"); }
+    }
+    
+    // Page khulne par balance dikhao
+    fetchBalance();
+
+    // 3. Tab Switching (Deposit/Withdraw)
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+        
+        if(tab === 'deposit') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('deposit-sec').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('withdraw-sec').classList.add('active');
         }
-        fetchBalance();
+    }
 
-        function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-            
-            if(tab === 'deposit') {
-                document.querySelectorAll('.tab')[0].classList.add('active');
-                document.getElementById('deposit-sec').classList.add('active');
-            } else {
-                document.querySelectorAll('.tab')[1].classList.add('active');
-                document.getElementById('withdraw-sec').classList.add('active');
-            }
-        }
+    // 4. Deposit Handle Karein (UTR Validation ke saath)
+    async function handleDeposit() {
+        const amount = document.getElementById('dep-amount').value;
+        const utr = document.getElementById('dep-utr').value;
 
-        async function handleDeposit() {
-            const amount = document.getElementById('dep-amount').value;
-            const utr = document.getElementById('dep-utr').value;
+        if(!amount || amount < 10) return alert("Kam se kam ₹10 deposit karein.");
+        if(!utr || utr.length < 10) return alert("Kripya sahi UTR/Transaction ID daalein.");
 
-            if(!amount || !utr || utr.length < 12) return alert("Enter valid amount and 12-digit UTR.");
-
+        try {
             const res = await fetch('/api/deposit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Yahan hum currentUser (Phone number) bhej rahe hain
-                body: JSON.stringify({ amount: amount, utr: utr, userId: currentUser })
+                body: JSON.stringify({ 
+                    amount: Number(amount), 
+                    utr: utr, 
+                    userId: currentUser // Ye phone number hai
+                })
             });
             const data = await res.json();
             alert(data.message);
@@ -167,19 +180,26 @@
                 document.getElementById('dep-utr').value = '';
                 fetchBalance();
             }
-        }
+        } catch (e) { alert("Server connection failed!"); }
+    }
 
-        async function handleWithdraw() {
-            const amount = document.getElementById('with-amount').value;
-            const upiId = document.getElementById('with-upi').value;
+    // 5. Withdraw Handle Karein
+    async function handleWithdraw() {
+        const amount = document.getElementById('with-amount').value;
+        const upiId = document.getElementById('with-upi').value;
 
-            if(!amount || !upiId) return alert("Enter valid amount and UPI ID.");
+        if(!amount || amount < 100) return alert("Minimum withdrawal ₹100 hai.");
+        if(!upiId || !upiId.includes('@')) return alert("Sahi UPI ID daalein (example@ybl).");
 
+        try {
             const res = await fetch('/api/withdraw', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Yahan bhi currentUser bhej rahe hain
-                body: JSON.stringify({ amount: amount, upiId: upiId, userId: currentUser })
+                body: JSON.stringify({ 
+                    amount: Number(amount), 
+                    upiId: upiId, 
+                    userId: currentUser 
+                })
             });
             const data = await res.json();
             alert(data.message);
@@ -188,7 +208,8 @@
                 document.getElementById('with-upi').value = '';
                 fetchBalance();
             }
-        }
-    </script>
+        } catch (e) { alert("Server connection failed!"); }
+    }
+</script>
 </body>
 </html>
