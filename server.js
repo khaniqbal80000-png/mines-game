@@ -275,4 +275,44 @@ app.post('/api/admin/create-gift', async (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/redeem-gift', async (req, res) => {
+    const { code, userId } = req.body;
+    try {
+        const gift = await GiftCode.findOne({ code: code.trim() });
+        if (!gift) return res.json({ success: false, message: "❌ Invalid Promo Code!" });
+        
+        // Check 1: Kya limit khatam ho gayi?
+        if (gift.usedCount >= gift.usageLimit) return res.json({ success: false, message: "⚠️ Limit Full ho gayi!" });
+        
+        // Check 2: Kya is user ne pehle hi use kar liya?
+        if (gift.claimedUsers.includes(userId)) return res.json({ success: false, message: "🚫 Aapne pehle hi use kar liya hai!" });
+
+        const user = await User.findOne({ phone: userId });
+        if (!user) return res.json({ success: false, message: "User not found!" });
+
+        // Logic: Paisa add karo aur record update karo
+        user.balance += Number(gift.amount);
+        gift.usedCount += 1;
+        gift.claimedUsers.push(userId);
+        
+        // History mein dikhane ke liye
+        user.transactions.unshift({
+            id: `GIFT-${Date.now()}`,
+            type: 'Gift Claim',
+            amount: Number(gift.amount),
+            date: new Date().toLocaleString(),
+            status: 'Success'
+        });
+
+        user.markModified('transactions');
+        await user.save();
+        await gift.save();
+
+        res.json({ success: true, message: `🎉 ₹${gift.amount} mil gaye!`, newBalance: user.balance });
+    } catch (e) { 
+        console.error(e);
+        res.json({ success: false, message: "Server Error!" }); 
+    }
+});
+
 app.listen(PORT, () => console.log(`🚀 Server Live on Port ${PORT}`));

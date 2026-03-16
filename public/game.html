@@ -447,6 +447,31 @@
         }
     }
 
+    async function claimPromoCode() {
+    const code = document.getElementById('promo-input').value; // Input ki ID check kar lena
+    if(!code) return alert("Pehle code toh daalo bhai!");
+
+    try {
+        const res = await fetch('/api/redeem-gift', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, userId: currentUser })
+        });
+        const data = await res.json();
+
+        if(data.success) {
+            alert(data.message);
+            document.getElementById('promo-input').value = '';
+            // Balance update karo turant
+            fetchBalance(); 
+        } else {
+            alert(data.message);
+        }
+    } catch (e) {
+        alert("Server connection failed!");
+    }
+}
+
     // --- 4. UTILS & BONUS ---
     function updateStatusText() {
         document.getElementById('multiplier').innerText = currentMultiplier.toFixed(2) + 'x';
