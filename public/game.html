@@ -520,6 +520,39 @@
         }
     }
 
+    // 1. URL se referral code pakadna
+let hiddenReferralCode = "";
+window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    hiddenReferralCode = urlParams.get('ref') || "";
+    console.log("Referral Code Found in URL:", hiddenReferralCode);
+};
+
+// 2. Registration function mein ise bhejiyega
+async function handleRegister() {
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const password = document.getElementById('password').value;
+
+    const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            name, 
+            phone, 
+            password, 
+            referralCode: hiddenReferralCode // 👈 Ye URL wala code server ko jayega
+        })
+    });
+    const data = await res.json();
+    if(data.success) {
+        alert("Registration Successful!");
+        window.location.href = '/game.html';
+    } else {
+        alert(data.message);
+    }
+}
+
     function showEvent(msg) { document.getElementById('event-text').innerText = msg; document.getElementById('event-modal').style.display = 'block'; }
     function closeEvent() { document.getElementById('event-modal').style.display = 'none'; }
 

@@ -334,13 +334,16 @@ app.post('/api/admin/approve-request', async (req, res) => {
                 const successDeposits = user.transactions.filter(t => t.type === 'Deposit' && t.status === 'Success');
                 
                 // Agar ye pehla deposit hai aur user kisi ke code se aaya hai
-                if (successDeposits.length === 1 && user.referredBy) {
-                    // 🔥 YAHAN FIX HAI: Phone ke bajaye referralCode se dhoondo
-                    const referrer = await User.findOne({ referralCode: user.referredBy });
-                    
-                    if (referrer) {
-                        referrer.balance += 20; // Reward Amount
-                        referrer.referralCount = (referrer.referralCount || 0) + 1;
+                // approve-request ke andar referral wala part
+if (successDeposits.length === 1 && user.referredBy) {
+    // URL se aaya hua code hamesha capital/small ka lafda kar sakta hai
+    const cleanCode = user.referredBy.trim().toUpperCase();
+    const referrer = await User.findOne({ referralCode: cleanCode });
+    
+    if (referrer) {
+        referrer.balance += 20;
+        referrer.referralCount = (referrer.referralCount || 0) + 1;
+        // ... baaki history logic wahi
                         
                         referrer.transactions.unshift({
                             id: `REF-${Date.now()}`,
