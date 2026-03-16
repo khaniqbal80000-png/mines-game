@@ -327,19 +327,21 @@ app.post('/api/admin/approve-request', async (req, res) => {
 
             if (tx.type === 'Deposit') {
                 // 1. User ko uska deposit + 10% bonus do
-                const bonus = tx.amount * 0.10;
+                const bonus = Number(tx.amount) * 0.10;
                 user.balance += (Number(tx.amount) + bonus);
 
-                // 2. REFERRAL REWARD LOGIC (Sirf Pehle Deposit Par)
-                // Check karo ki kya ye user ka pehla successful deposit hai
+                // 2. REFERRAL REWARD LOGIC (Strict Fix)
                 const successDeposits = user.transactions.filter(t => t.type === 'Deposit' && t.status === 'Success');
                 
-                // Approve API ke andar ye line change karein:
+                // Agar ye pehla deposit hai aur user kisi ke code se aaya hai
                 if (successDeposits.length === 1 && user.referredBy) {
-             const referrer = await User.findOne({ referralCode: user.referredBy }); // 👈 Code se dhoondo
-                 // ... baaki ka logic wahi rahega
+                    // 🔥 YAHAN FIX HAI: Phone ke bajaye referralCode se dhoondo
+                    const referrer = await User.findOne({ referralCode: user.referredBy });
+                    
                     if (referrer) {
-                        referrer.balance += 20; // Referral Reward
+                        referrer.balance += 20; // Reward Amount
+                        referrer.referralCount = (referrer.referralCount || 0) + 1;
+                        
                         referrer.transactions.unshift({
                             id: `REF-${Date.now()}`,
                             type: 'Referral Bonus',
@@ -348,9 +350,12 @@ app.post('/api/admin/approve-request', async (req, res) => {
                             status: 'Success',
                             note: `Bonus for ${userPhone}'s 1st deposit`
                         });
+
                         referrer.markModified('transactions');
                         await referrer.save();
-                        console.log(`Referral Reward ₹20 sent to ${referrer.phone}`);
+                        console.log(`✅ Success: ₹20 sent to Referrer (${referrer.phone})`);
+                    } else {
+                        console.log(`❌ Error: Referrer with code ${user.referredBy} not found.`);
                     }
                 }
             }
@@ -361,12 +366,12 @@ app.post('/api/admin/approve-request', async (req, res) => {
 
         user.markModified('transactions');
         await user.save();
-        res.json({ success: true, message: `Request Approved & Referral Reward Checked!` });
+        res.json({ success: true, message: `Approved! Referral Reward processed.` });
     } catch (e) {
+        console.error("Approve Error:", e);
         res.json({ success: false, message: "Server Error!" });
     }
 });
-
 app.get('/api/admin/pending-requests', async (req, res) => {
     try {
         // Un users ko dhoondo jinke transactions mein status 'Pending' hai
